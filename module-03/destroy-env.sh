@@ -9,7 +9,8 @@ echo "Beginning destroy script for module-03 assessment..."
 
 # Collect Instance IDs
 # https://stackoverflow.com/questions/31744316/aws-cli-filter-or-logic
-INSTANCEIDS=$(aws ec2 describe-instances --output=text --query 'Reservations[*].Instances[*].InstanceId' --filter "Name=instance-state-name,Values=running,pending")
+INSTANCEIDS=$(aws ec2 describe-instances --output=text --query 'Reservations[*].Instances[*].InstanceId' \
+  --filter "Name=instance-state-name,Values=running,pending")
 echo "List of INSTANCEIDS to deregister..."
 if [ "$INSTANCEIDS" == "" ];
   then
@@ -21,13 +22,9 @@ fi
 echo "Finding TARGETARN..."
 # https://awscli.amazonaws.com/v2/documentation/api/2.0.34/reference/elbv2/describe-target-groups.html
 TARGETARN=$(aws elbv2 create-target-group \
-    --name ${8}-targets \
-    --protocol HTTP \
-    --port 80 \
-    --target-type instance \
-    --vpc-id $VPCID \
-    --query 'TargetGroups[0].TargetGroupArn' \
-    --output text)
+     --load-balancer-arn $ELBARN \
+     --query 'TargetGroups[0].TargetGroupArn' \
+     --output text 2>/dev/null)
 echo $TARGETARN
 
 if [ "$INSTANCEIDS" != "" ]
