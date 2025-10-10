@@ -1,8 +1,8 @@
-# Cloud-Computing
-Creating repo for cloud
+# coursera material
 
-## Name 
-hello this is papu
+'sudo apt updat'
+'sudo apt install python3-dev python3-pip python3-setuptools'
+ 
+then install the python requirements package
 
-## Name 
-pushing and pullin code
+'python -m pip install -r ./requirements.txt'
