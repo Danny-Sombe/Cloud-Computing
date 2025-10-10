@@ -21,10 +21,9 @@ fi
 
 echo "Finding TARGETARN..."
 # https://awscli.amazonaws.com/v2/documentation/api/2.0.34/reference/elbv2/describe-target-groups.html
-TARGETARN=$(aws elbv2 create-target-group \
-     --load-balancer-arn $ELBARN \
-     --query 'TargetGroups[0].TargetGroupArn' \
-     --output text 2>/dev/null)
+TARGETARN=$(aws elbv2 describe-target-groups \
+    --query 'TargetGroups[*].TargetGroupArn' \
+    --output text 2>/dev/null)
 echo $TARGETARN
 
 if [ "$INSTANCEIDS" != "" ]
@@ -72,7 +71,7 @@ echo $ELBARN
     for ELB in ${ELBARNSARRAY[@]};
       do
         echo "Deleting Listener..."
-        LISTENERARN=$(aws elbv2 describe-listeners --load-balancer-arn $ELB --query='Listeners[*].ListenerArn')
+        LISTENERARN=$(aws elbv2 describe-listeners --load-balancer-arn $ELBARN --query='Listeners[*].ListenerArn' --output text)
         aws elbv2 delete-listener --listener-arn $LISTENERARN
         echo "Listener deleted..."
       done
