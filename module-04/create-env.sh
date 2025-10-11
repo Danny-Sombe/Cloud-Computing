@@ -94,10 +94,10 @@ echo 'Creating Auto Scaling Group...'
 # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/autoscaling/create-auto-scaling-group.html
 aws autoscaling create-auto-scaling-group \
   --auto-scaling-group-name ${7} \
-  --launch-template "LaunchTemplateName=${12},Version=${LAUNCHTEMPLATEID}" \
-  --min-size 1 \
-  --max-size 3 \
-  --desired-capacity 1 \
+  --launch-template ${12} \
+  --min-size ${14} \
+  --max-size ${15} \
+  --desired-capacity ${16} \
   --vpc-zone-identifier $SUBNET2A,$SUBNET2B
 
 echo 'Waiting for Auto Scaling Group to spin up EC2 instances and attach them to the TargetARN...'
