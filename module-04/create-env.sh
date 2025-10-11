@@ -68,7 +68,7 @@ LAUNCHTEMPLATEID=$(aws ec2 describe-launch-templates --launch-template-names ${1
 echo 'Creating the TARGET GROUP and storing the ARN in $TARGETARN'
 # https://awscli.amazonaws.com/v2/documentation/api/2.0.34/reference/elbv2/create-target-group.html
 TARGETARN=$(aws elbv2 create-target-group \
-    --name ${8}-targets \
+    --name ${8}-targets-$(date +%s) \
     --protocol HTTP \
     --port 80 \
     --target-type instance \
@@ -110,7 +110,7 @@ echo 'Creating Auto Scaling Group...'
 # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/autoscaling/create-auto-scaling-group.html
 aws autoscaling create-auto-scaling-group \
     --auto-scaling-group-name ${13} \
-    --launch-template LaunchTemplateName=${12},Version=\$Latest \
+    --launch-template "LaunchTemplateName=${12},Version=\$Latest" \
     --min-size ${14} \
     --max-size ${15} \
     --desired-capacity ${16} \
