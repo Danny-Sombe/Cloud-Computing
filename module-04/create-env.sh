@@ -44,7 +44,6 @@ if [ -a $ltconfigfile ]
     echo "Launch template data file: $ltconfigfile exists..." 
 fi
 echo "Finding and storing default VPCID value..."
-# https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/describe-vpcs.html
 VPCID=$(aws ec2 describe-vpcs --filters "Name=is-default,Values=true" --query "Vpcs[*].VpcId" --output=text)
 echo $VPCID
 
@@ -57,88 +56,50 @@ echo $SUBNET2B
 # Create AWS EC2 Launch Template
 # https://awscli.amazonaws.com/v2/documentation/api/2.0.33/reference/ec2/create-launch-template.html
 echo "Creating the AutoScalingGroup Launch Template..."
-aws ec2 create-launch-template \
-  --launch-template-name ${12} \
-  --launch-template-data file://config.json 
+aws ec2 create-launch-template \e[31m--launch-template-name ${12} --launch-template-data file://config.json\e[0m
 echo "Launch Template created..."
 
 # Retreive the Launch Template ID using a --query
-LAUNCHTEMPLATEID=$(aws ec2 describe-launch-templates --launch-template-names ${12} --query 'LaunchTemplates[*].LaunchTemplateId' --output text)
+LAUNCHTEMPLATEID=\e[31m$(aws ec2 describe-launch-templates --launch-template-names ${12} --query 'LaunchTemplates[*].LaunchTemplateId' --output text)\e[0m
 
 echo 'Creating the TARGET GROUP and storing the ARN in $TARGETARN'
 # https://awscli.amazonaws.com/v2/documentation/api/2.0.34/reference/elbv2/create-target-group.html
-TARGETARN=$(aws elbv2 create-target-group \
-    --name ${8}-targets-$(date +%s) \
-    --protocol HTTP \
-    --port 80 \
-    --target-type instance \
-    --vpc-id $VPCID \
-    --query 'TargetGroups[0].TargetGroupArn' \
-    --output text)
+TARGETARN=\e[31m$(aws elbv2 create-target-group --name ${8} --protocol HTTP --port 80 --vpc-id $VPCID --target-type instance --query 'TargetGroups[0].TargetGroupArn' --output text)\e[0m
 echo $TARGETARN
 
 echo "Creating ELBv2 Elastic Load Balancer..."
 #https://awscli.amazonaws.com/v2/documentation/api/2.0.34/reference/elbv2/create-load-balancer.html
-ELBARN=$(aws elbv2 create-load-balancer \
-    --name ${9} \
-    --subnets $SUBNET2A $SUBNET2B \
-    --security-groups $4 \
-    --query 'LoadBalancers[0].LoadBalancerArn' \
-    --output text)
+ELBARN=\e[31m$(aws elbv2 create-load-balancer --name ${9} --subnets $SUBNET2A $SUBNET2B --security-groups $4 --query 'LoadBalancers[0].LoadBalancerArn' --output text)\e[0m
 echo $ELBARN
 
 # Decrease the deregistration timeout (deregisters faster than the default 300 second timeout per instance)
-# https://awscli.amazonaws.com/v2/documentation/api/latest/reference/elbv2/modify-target-group-attributes.html
 aws elbv2 modify-target-group-attributes --target-group-arn $TARGETARN --attributes Key=deregistration_delay.timeout_seconds,Value=30
 
-# AWS elbv2 wait for load-balancer available
-# https://awscli.amazonaws.com/v2/documentation/api/latest/reference/elbv2/wait/load-balancer-available.html
 echo "Waiting for load balancer to be available..."
-aws elbv2 wait load-balancer-available --load-balancer-arns $ELBARN
+aws elbv2 wait load-balancer-available
 echo "Load balancer available..."
 # create AWS elbv2 listener for HTTP on port 80
-#https://awscli.amazonaws.com/v2/documentation/api/latest/reference/elbv2/create-listener.html
-aws elbv2 create-listener \
-    --load-balancer-arn $ELBARN \
-    --protocol HTTP \
-    --port 80 \
-    --default-actions Type=forward,TargetGroupArn=$TARGETARN
+aws elbv2 create-listener \e[31m--load-balancer-arn $ELBARN --protocol HTTP --port 80 --default-actions Type=forward,TargetGroupArn=$TARGETARN\e[0m
 
 echo 'Creating Auto Scaling Group...'
-# Create Autoscaling group ASG - needs to come after Target Group is created
-# Create autoscaling group
-# https://awscli.amazonaws.com/v2/documentation/api/latest/reference/autoscaling/create-auto-scaling-group.html
-aws autoscaling create-auto-scaling-group \
-    --auto-scaling-group-name ${13} \
-    --launch-template "LaunchTemplateName=${12},Version=\$Latest" \
-    --min-size ${14} \
-    --max-size ${15} \
-    --desired-capacity ${16} \
-    --vpc-zone-identifier "$SUBNET2A,$SUBNET2B" \
-    --target-group-arns $TARGETARN
+aws autoscaling create-auto-scaling-group \e[31m--auto-scaling-group-name ${13} --launch-template "LaunchTemplateName=${12},Version=\$Latest" --min-size ${14} --max-size ${15} --desired-capacity ${16} --vpc-zone-identifier "$SUBNET2A,$SUBNET2B" --target-group-arns $TARGETARN\e[0m
 
 echo 'Waiting for Auto Scaling Group to spin up EC2 instances and attach them to the TargetARN...'
-# Create waiter for registering targets
-# https://docs.aws.amazon.com/cli/latest/reference/elbv2/wait/target-in-service.html
-aws elbv2 wait target-in-service --target-group-arns $TARGETARN
+aws elbv2 wait target-in-service
 echo "Targets attached to Auto Scaling Group..."
 
-# Collect Instance IDs
-# https://stackoverflow.com/questions/31744316/aws-cli-filter-or-logic
 INSTANCEIDS=$(aws ec2 describe-instances --output=text --query 'Reservations[*].Instances[*].InstanceId' --filter "Name=instance-state-name,Values=running,pending")
 
 if [ "$INSTANCEIDS" != "" ]
   then
-    aws ec2 wait instance-running --instance-ids $INSTANCEIDS
+    aws ec2 wait instance-running
     echo "Finished launching instances..."
   else
     echo 'There are no running or pending values in $INSTANCEIDS to wait for...'
 fi 
 
-
 # Retreive ELBv2 URL via aws elbv2 describe-load-balancers --query and print it to the screen
-#https://awscli.amazonaws.com/v2/documentation/api/latest/reference/elbv2/describe-load-balancers.html
-URL=$(aws elbv2 describe-load-balancers --load-balancer-arns $ELBARN --query 'LoadBalancers[0].DNSName' --output text)
+URL=\e[31m$(aws elbv2 describe-load-balancers --load-balancer-arns $ELBARN --query 'LoadBalancers[0].DNSName' --output text)\e[0m
 echo $URL
 
 # end of outer fi - based on arguments.txt content
