@@ -59,7 +59,9 @@ echo $SUBNET2B
 echo "Creating the AutoScalingGroup Launch Template..."
 aws ec2 create-launch-template \
   --launch-template-name ${12} \
-  --launch-template-data file://config.json  
+  --version-description AutoScalingVersion1 \
+  --launch-template-data file://config.json \
+  --region ${17}
 echo "Launch Template created..."
 
 # Retreive the Launch Template ID using a --query
@@ -67,12 +69,23 @@ LAUNCHTEMPLATEID=$(aws ec2 describe-launch-templates --query "LaunchTemplates[?L
 
 echo 'Creating the TARGET GROUP and storing the ARN in $TARGETARN'
 # https://awscli.amazonaws.com/v2/documentation/api/2.0.34/reference/elbv2/create-target-group.html
-TARGETARN=$(aws elbv2 create-target-group --name ${8} --protocol HTTP --port 80 --vpc-id $VPCID --query "TargetGroups[0].TargetGroupArn" --output text)
+TARGETARN=$(aws elbv2 create-target-group \
+  --name ${8} \
+  --protocol HTTP \
+  --port 80 \
+  --vpc-id $VPCID \
+  --query "TargetGroups[0].TargetGroupArn" \
+  --output text)
 echo $TARGETARN
 
 echo "Creating ELBv2 Elastic Load Balancer..."
 #https://awscli.amazonaws.com/v2/documentation/api/2.0.34/reference/elbv2/create-load-balancer.html
-ELBARN=$(aws elbv2 create-load-balancer --name ${9} --subnets $SUBNET2A $SUBNET2B --security-groups $SGID --query "LoadBalancers[0].LoadBalancerArn" --output text)
+ELBARN=$(aws elbv2 create-load-balancer \
+  --name ${9} \
+  --subnets $SUBNET2A $SUBNET2B \
+  --security-groups $SGID \
+  --query "LoadBalancers[0].LoadBalancerArn" \
+  --output text)
 echo $ELBARN
 
 # Decrease the deregistration timeout (deregisters faster than the default 300 second timeout per instance)
@@ -86,19 +99,24 @@ aws elbv2 wait load-balancer-available --load-balancer-arn $ELBARN
 echo "Load balancer available..."
 # create AWS elbv2 listener for HTTP on port 80
 #https://awscli.amazonaws.com/v2/documentation/api/latest/reference/elbv2/create-listener.html
-aws elbv2 create-listener --load-balancer-arn $ELBARN --protocol HTTP --port 80 --default-actions Type=forward,TargetGroupArn=$TARGETARN
+aws elbv2 create-listener --load-balancer-arn $ELBARN \
+  --protocol HTTP \
+  --port 80 \
+  --default-actions Type=forward,TargetGroupArn=$TARGETARN
 
 echo 'Creating Auto Scaling Group...'
 # Create Autoscaling group ASG - needs to come after Target Group is created
 # Create autoscaling group
 # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/autoscaling/create-auto-scaling-group.html
 aws autoscaling create-auto-scaling-group \
-  --auto-scaling-group-name ${13} \
-  --launch-template LaunchTemplateName=${12},Version='$Latest' \
+  --group-name ${13} \
+  --launch-template "LaunchTemplateId=$LAUNCHTEMPLATEID,Version=1" \
   --min-size ${14} \
   --max-size ${15} \
   --desired-capacity ${16} \
-  --vpc-zone-identifier $SUBNET2A,$SUBNET2B
+  --vpc-zone-identifier "$SUBNET2A,$SUBNET2B" \
+  --target-group-arns $TARGETARN \
+  --tags "ResourceId=${13},ResourceType=auto-scaling-group,Key=Name,Value=${13},PropagateAtLaunch=true"
 
 echo 'Waiting for Auto Scaling Group to spin up EC2 instances and attach them to the TargetARN...'
 # Create waiter for registering targets
