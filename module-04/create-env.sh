@@ -65,7 +65,9 @@ aws ec2 create-launch-template \
 echo "Launch Template created..."
 
 # Retreive the Launch Template ID using a --query
-LAUNCHTEMPLATEID=$(aws ec2 describe-launch-templates --query "LaunchTemplates[?LaunchTemplateName=='${12}'].LaunchTemplateId" --output text)
+LAUNCHTEMPLATEID=$(aws ec2 describe-launch-templates \
+  --query "LaunchTemplates[?LaunchTemplateName=='${12}'].LaunchTemplateId" \
+  --output text)
 
 echo 'Creating the TARGET GROUP and storing the ARN in $TARGETARN'
 # https://awscli.amazonaws.com/v2/documentation/api/2.0.34/reference/elbv2/create-target-group.html
@@ -109,8 +111,8 @@ echo 'Creating Auto Scaling Group...'
 # Create autoscaling group
 # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/autoscaling/create-auto-scaling-group.html
 aws autoscaling create-auto-scaling-group \
-  --auto-scaling-group-name ${13}\
-  --launch-template-data "LaunchTemplateId=$LAUNCHTEMPLATEID,Version=1" \
+  --auto-scaling-group-name ${13} \
+  --launch-template "LaunchTemplateId=$LAUNCHTEMPLATEID,Version=1" \
   --min-size ${14} \
   --max-size ${15} \
   --desired-capacity ${16} \
