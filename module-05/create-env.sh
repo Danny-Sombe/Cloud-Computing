@@ -104,7 +104,7 @@ echo 'Creating Auto Scaling Group...'
 # Create autoscaling group
 # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/autoscaling/create-auto-scaling-group.html
 aws autoscaling create-auto-scaling-group \
-  --group-name ${13} \
+  --auto-scaling-group-name ${13} \
   --launch-template "LaunchTemplateId=$LAUNCHTEMPLATEID,Version=1" \
   --min-size ${14} \
   --max-size ${15} \
