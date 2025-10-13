@@ -31,12 +31,17 @@ if [ "$ASGNAMES" != "" ]
       echo "Processing Auto Scaling Group: $ASGNAME"
 
       aws autoscaling update-auto-scaling-group \
-        --auto-scaling-group-name $ASGNAME \
-        --min-size 
+      --auto-scaling-group-name $ASGNAME \
+      --min-size 0 \
+      --desired-capacity 0 \
+      --max-size 0 \
+      --region $REGION
+
 
       aws autoscaling update-auto-scaling-group \
       --auto-scaling-group-name $ASGNAME \
-      --desired-capacity 
+      --desired-capacity 0 \
+      --region $REGION
   
      if [ "$INSTANCEIDS" != "" ]
        then
@@ -144,7 +149,7 @@ else
     for ASGNAME in ${ASGNAMESARRAY[@]};
       do
       echo "Deleting $ASGNAME..."
-      aws autoscaling delete-auto-scaling-group --auto-scaling-group-name $ASGNAME
+      aws autoscaling delete-auto-scaling-group --auto-scaling-group-name $ASGNAME --force-delete --region $REGION
       echo "Deleted $ASGNAME..."
       done
 # End of if for checking on ASGs
@@ -155,9 +160,9 @@ LAUNCHTEMPLATEIDS=$(aws ec2 describe-launch-templates --query 'LaunchTemplates[]
 
 if [ "$LAUNCHTEMPLATEIDS" != "" ]
   then
-    echo "Found launch-tempate: $LAUNCHTEMPLATEIDS..."
+    echo "Found launch-template: $LAUNCHTEMPLATEIDS..."
     for LAUNCHTEMPLATEID in $LAUNCHTEMPLATEIDS; do
-      echo "Deleting launch-template: $LAUNCHTEMPID"
+      echo "Deleting launch-template: $LAUNCHTEMPLATEID ..."
       aws ec2 delete-launch-template --launch-template-name "$LAUNCHTEMPLATEID"
     done
 else
