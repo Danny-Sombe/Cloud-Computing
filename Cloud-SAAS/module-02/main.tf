@@ -171,9 +171,9 @@ resource "aws_autoscaling_group" "asg" {
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/autoscaling_attachment
 ##############################################################################
 # Create a new ALB Target Group attachment
-resource "aws_autoscaling_attachment" "asg-attach" {
+resource "aws_autoscaling_attachment" "asg_attach" {
   # Wait for lb to be running before attaching the ASG
-  depends_on = [ aws_lb.lb ]
+  depends_on = [aws_lb.lb]
   autoscaling_group_name = var.asg-name
   lb_target_group_arn = aws_lb_target_group.alb-lb-tg.arn
 
@@ -183,7 +183,7 @@ resource "aws_autoscaling_attachment" "asg-attach" {
 ##############################################################################
 resource "aws_lb_target_group" "alb-lb-tg" {
   # Depends on - wait for LB to exist
-  depends_on = [ aws_lb.lb ]
+  depends_on = [aws_lb.lb]
   name = var.tg-name
   target_type = "instance"
   port = 80
