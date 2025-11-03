@@ -1,22 +1,22 @@
 # Add values
 # Find the Ubuntu server 22.04 AMI for your region at this URL
 # https://cloud-images.ubuntu.com/locator/ec2/
-imageid                = 
+imageid                = "ami-0279a86684f669718"
 # Use t2.micro for the AWS Free Tier
 instance-type          = "t2.micro"
-key-name               = 
-vpc_security_group_ids = 
-tag-name               = 
-raw-bucket             = 
-finished-bucket        = 
-sns-topic              = 
-sqs                    = 
-dbname                 = 
-uname                  = 
-pass                   = 
-elb-name               = 
-asg-name               = 
+key-name               = "sonnlogix-key"
+vpc_security_group_ids = "sg-0c38a5b78e9bb4b79"
+tag-name               = "module2-tag"
+raw-bucket             = "sonnlogix-raw-bucket"
+finished-bucket        = "sonnlogix-finish-raw-bucket"
+sns-topic              = "sonnlogix-sns-topic"
+sqs                    = "sonnlogix-sqs"
+dbname                 = "sonnlogix-dbname"
+uname                  = "controller"
+pass                   = "wizard123!"
+elb-name               = "logix-elb"
+asg-name               = "sonnlogix-asg"
 min                    = 2
 max                    = 5
 desired                = 3
-tg-name                =
+tg-name                = "sonnlogix-tg"
