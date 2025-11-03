@@ -5,7 +5,7 @@
 # Note this isn't the most secure -- we will fix it in the next modules
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_instance
 ##############################################################################
-resource "aws_dbname_instance" "project_db" {
+resource "aws_db_instance" "project_db" {
   allocated_storage    = 10
   db_name              = var.dbname
   engine               = "mysql"
