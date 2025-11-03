@@ -5,7 +5,7 @@
 # Note this isn't the most secure -- we will fix it in the next modules
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_instance
 ##############################################################################
-resource "aws_db_instance" "project_db" {
+resource "aws_db_instance" "project_dbname" {
   allocated_storage    = 10
   db_name              = var.dbname
   engine               = "mysql"
@@ -171,7 +171,7 @@ resource "aws_autoscaling_group" "asg" {
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/autoscaling_attachment
 ##############################################################################
 # Create a new ALB Target Group attachment
-resource "aws_autoscaling_attachment" "asg_attach" {
+resource "aws_autoscaling_attachment" "asg-attach" {
   # Wait for lb to be running before attaching the ASG
   depends_on = [aws_lb.lb]
   autoscaling_group_name = var.asg-name
