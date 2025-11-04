@@ -14,8 +14,11 @@ resource "aws_db_instance" "project_db" {
   username             = var.uname
   password             = var.pass
   skip_final_snapshot  = true
-}
 
+      tags = {
+       Name = var.tag-name  # This applies the "module-02" tag  }
+      }
+}
 ##############################################################################
 # Create 2 S3 buckets - pull their names from the terraform.tfvars using the
 # ${var} function
