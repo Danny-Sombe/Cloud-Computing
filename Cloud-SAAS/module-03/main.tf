@@ -7,10 +7,6 @@
 resource "aws_vpc" "project" {
   cidr_block           = "172.32.0.0/16"
   enable_dns_hostnames = true
-
-  tags = {
-    Name = "project-vpc"
-  }
 }
 
 # Query the VPC information
@@ -65,7 +61,7 @@ resource "aws_vpc_security_group_ingress_rule" "allow_http_ipv4" {
 
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_egress_rule
 resource "aws_vpc_security_group_ingress_rule" "allow_ssh_ipv4" {
-  security_group_id = aws_security_group.example.id
+  security_group_id = aws_security_group.allow_ssh.id
   cidr_ipv4   = "10.0.0.0/8"
   from_port   = 80
   ip_protocol = "tcp"
@@ -289,7 +285,7 @@ resource "aws_lb" "lb" {
   name               = var.elb-name
   internal           = false
   load_balancer_type = "application"
-  security_groups = [aws_security_group.lb_sg.id]
+  security_groups = [aws_security_group.lb.id]
   # Place across all subnets
   subnets = [for subnet in aws_subnet.private : subnet.id]
 
