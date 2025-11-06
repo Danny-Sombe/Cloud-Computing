@@ -167,6 +167,7 @@ resource "aws_autoscaling_group" "asg" {
 
   launch_template {
     id      = aws_launch_template.lt.id
+    version = "$Latest"
   }
 }
 

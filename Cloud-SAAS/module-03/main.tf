@@ -5,7 +5,12 @@
 # With a CIDR block of 172.32.0.0/16
 # Enable_dns_hostnames
 resource "aws_vpc" "project" {
+  cidr_block           = "172.32.0.0/16"
+  enable_dns_hostnames = true
 
+  tags = {
+    Name = "project-vpc"
+  }
 }
 
 # Query the VPC information
@@ -29,25 +34,42 @@ output "list-of-azs" {
 # Don't forget the egress rules!!!
 # 
 resource "aws_security_group" "allow_http" {
-
+  name        = "allow_http"
+  description = "Allow HTTP inbound and all outbound"
+  vpc_id      = aws_vpc.main.id
 }
+
+resource "aws_vpc_security_group_ingress_rule" "http_ipv4" {
+  security_group_id = aws_security_group.allow_http.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 80
+  to_port           = 80
+  ip_protocol       = "tcp"
+}
+
+resource "aws_vpc_security_group_egress_rule" "egress_all" {
+  security_group_id = aws_security_group.allow_http.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"
+}
+
 
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_ingress_rule
 resource "aws_vpc_security_group_ingress_rule" "allow_http_ipv4" {
-  security_group_id = 
-  cidr_ipv4         = 
-  from_port         = 
-  ip_protocol       = 
-  to_port           = 
+  security_group_id = aws_security_group.allow_http.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 80
+  ip_protocol       = "tcp"
+  to_port           = 80
 }
 
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_egress_rule
 resource "aws_vpc_security_group_ingress_rule" "allow_ssh_ipv4" {
-  security_group_id = 
-  cidr_ipv4         = 
-  from_port         = 
-  ip_protocol       = 
-  to_port           = 
+  security_group_id = aws_security_group.example.id
+  cidr_ipv4   = "10.0.0.0/8"
+  from_port   = 80
+  ip_protocol = "tcp"
+  to_port     = 80
 }
 
 resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
@@ -70,13 +92,13 @@ resource "aws_vpc_dhcp_options" "project" {
 # Associate these options with our VPC now
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_dhcp_options
 resource "aws_vpc_dhcp_options_association" "dns_resolver" {
-  vpc_id          = 
-  dhcp_options_id = 
+  vpc_id          = aws_vpc.project.id
+  dhcp_options_id = aws_vpc_dhcp_options.project.id
 }
 
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/internet_gateway
 resource "aws_internet_gateway" "gw" {
-  vpc_id = 
+  vpc_id = aws_vpc.project.id
 
   tags = {
     Name = var.tag-name
@@ -86,11 +108,11 @@ resource "aws_internet_gateway" "gw" {
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table
 resource "aws_route_table" "example" {
   depends_on = [ aws_vpc.project ]
-  vpc_id = 
+  vpc_id = aws_vpc.project.id
 
   route {
-    cidr_block = 
-    gateway_id = 
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.gw.id
   }
 
   tags = {
@@ -112,16 +134,16 @@ resource "aws_route_table_association" "subnets" {
 # Now make the new route the main associated route
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/main_route_table_association
 resource "aws_main_route_table_association" "a" {
-  vpc_id         = 
-  route_table_id = 
+  vpc_id         = aws_vpc.project.id
+  route_table_id = aws_route_table.example.id
 }
 
 # IAM instance policy
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_instance_profile
 resource "aws_iam_instance_profile" "coursera_profile" {
   # Give it a name
-  name = 
-  role = 
+  name = "coursera_profile"
+  role = aws_iam_role.role.name
 }
 
 # Creating the policy (rules) for what the role can do
@@ -205,13 +227,17 @@ output "aws_subnets" {
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/launch_template
 ##############################################################################
 resource "aws_launch_template" "lt" {
-  image_id                             = 
-  instance_initiated_shutdown_behavior = 
-  instance_type                        = 
-  key_name                             = 
-  vpc_security_group_ids               = 
+  image_id                             = var.imageid
+  instance_initiated_shutdown_behavior = "terminate"
+  instance_type                        = var.instance-type
+  key_name                             = var.key-name
+  vpc_security_group_ids               = [aws_security_group.allow_http.id]
   iam_instance_profile {
-    name = 
+    name = aws_iam_instance_profile.coursera_profile.name
+  }
+
+  monitoring {
+    enabled = "false"
   }
 
   tag_specifications {
@@ -229,14 +255,14 @@ resource "aws_launch_template" "lt" {
 ##############################################################################
 
 resource "aws_autoscaling_group" "asg" {
-  name                      = 
+  name                      = var.asg-name
   depends_on                = [aws_launch_template.lt]
-  desired_capacity          = 
-  max_size                  = 
-  min_size                  = 
+  desired_capacity          = var.desired
+  max_size                  = var.max
+  min_size                  = var.min
   health_check_grace_period = 300
   health_check_type         = "EC2"
-  target_group_arns         = 
+  target_group_arns         = [aws_lb_target_group.alb-lb-tg.arn]
   # place in all AZs
   # Use this if you only have the default subnet per AZ
   # availability_zones        =  data.aws_availability_zones.available.names
@@ -250,7 +276,7 @@ resource "aws_autoscaling_group" "asg" {
   }
 
   launch_template {
-    id      = 
+    id      = aws_launch_template.lt.id
     version = "$Latest"
   }
 }
@@ -260,10 +286,10 @@ resource "aws_autoscaling_group" "asg" {
 ##############################################################################
 resource "aws_lb" "lb" {
   depends_on = [ aws_subnet.private ]
-  name               = 
+  name               = var.elb-name
   internal           = false
   load_balancer_type = "application"
-  security_groups = 
+  security_groups = [aws_security_group.lb_sg.id]
   # Place across all subnets
   subnets = [for subnet in aws_subnet.private : subnet.id]
 
@@ -286,8 +312,8 @@ output "url" {
 resource "aws_autoscaling_attachment" "example" {
   # Wait for lb to be running before attaching to asg
   depends_on  = [aws_lb.lb]
-  autoscaling_group_name = 
-  lb_target_group_arn    = 
+  autoscaling_group_name = aws_autoscaling_group.asg.id
+  lb_target_group_arn    = aws_lb_target_group.alb-lb-tg.arn
 }
 
 output "alb-lb-tg-arn" {
@@ -337,14 +363,18 @@ resource "aws_lb_listener" "front_end" {
 
 resource "aws_s3_bucket" "raw-bucket" {
   # Create bucket name and use force_destroy
+  bucket        = var.raw-s3-bucket
+  force_destroy = true
 }
 
 resource "aws_s3_bucket" "finished-bucket" {
   # Create bucket name and use force_destroy
+    bucket        = var.finished-s3-bucket
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_public_access_block" "allow_access_from_another_account-raw" {
-  bucket = 
+  bucket = aws_s3_bucket.raw-bucket.id
   depends_on=[data.aws_iam_policy_document.allow_access_from_another_account-raw]
 
   block_public_acls       = true
@@ -354,7 +384,7 @@ resource "aws_s3_bucket_public_access_block" "allow_access_from_another_account-
 }
 
 resource "aws_s3_bucket_public_access_block" "allow_access_from_another_account-finished" {
-  bucket = 
+  bucket = aws_s3_bucket.finished-bucket.id
   depends_on=[data.aws_iam_policy_document.allow_access_from_another_account-finished]
   
 
@@ -365,8 +395,8 @@ resource "aws_s3_bucket_public_access_block" "allow_access_from_another_account-
 }
 
 resource "aws_s3_bucket_policy" "allow_access_from_another_account-raw" {
-  depends_on  = []
-  bucket = 
+  depends_on  = [aws_s3_bucket_public_access_block.allow_access_from_another_account-raw]
+  bucket = aws_s3_bucket.raw-bucket.id
   policy = data.aws_iam_policy_document.allow_access_from_another_account-raw.json
 }
 
@@ -404,7 +434,8 @@ data "aws_iam_policy_document" "allow_access_from_another_account-finished" {
     }
 
     actions = [
-      "s3:GetObject"
+      "s3:GetObject",
+      "s3:PutObject"
     ]
 
     resources = [
