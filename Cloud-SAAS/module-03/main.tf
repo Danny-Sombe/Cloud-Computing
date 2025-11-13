@@ -133,25 +133,8 @@ resource "aws_main_route_table_association" "a" {
 # IAM instance policy
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_instance_profile
 resource "aws_iam_instance_profile" "coursera_profile" {
-  # Give it a name
-  name = "coursera-instance-profile" 
+  name = "coursera-instance-profile"
   role = aws_iam_role.coursera_profile.name
-}
-
-resource "aws_iam_role" "coursera_profile" {
-  name = "coursera-profile-role"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        },
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
 }
 
 # Creating the policy (rules) for what the role can do
