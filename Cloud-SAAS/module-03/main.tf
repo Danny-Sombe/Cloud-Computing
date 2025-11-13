@@ -135,7 +135,7 @@ resource "aws_main_route_table_association" "a" {
 resource "aws_iam_instance_profile" "coursera_profile" {
   # Give it a name
   name = "coursera-instance-profile" 
-  role = aws_iam_role.coursera_role.name
+  role = aws_iam_role.coursera_profile_role.name
 }
 
 # Creating the policy (rules) for what the role can do
