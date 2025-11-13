@@ -1,16 +1,14 @@
-##############################################################################
+added final part##############################################################################
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc
 ##############################################################################
 # Create a VPC
-# With a CIDR block of 172.32.0.0/16
-# Enable_dns_hostnames
 resource "aws_vpc" "project" {
-cidr_block = "172.32.0.0/16"
-enable_dns_hostnames = true
-
-tags = {
-  Name = var.tag-name
-}
+  cidr_block = "172.32.0.0/16"
+  enable_dns_hostnames = true
+  
+  tags = {
+    Name = var.tag-name
+  }
 }
 
 # Query the VPC information
@@ -32,21 +30,17 @@ output "list-of-azs" {
 # Create security group
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group
 # Don't forget the egress rules!!!
-# 
 resource "aws_security_group" "allow_http" {
-    name         = "allow_http"
-    description  = "allow http inbound and outbound traffic - created by ops team"
-    vpc_id       = aws_vpc.project.id
+  name        = "allow_http"
+  description = "Allow http inbound traffic and all outbound traffic"
+  vpc_id      = aws_vpc.project.id
 
-    tags = {
-            Name = var.tag-name
-            proto = "http"
-
-          }
+  tags = {
+    proto = "http"
+    Name = var.tag-name
+  }
 }
 
-
-# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_ingress_rule
 resource "aws_vpc_security_group_ingress_rule" "allow_http_ipv4" {
   security_group_id = aws_security_group.allow_http.id
   cidr_ipv4         = "0.0.0.0/0"
@@ -55,7 +49,6 @@ resource "aws_vpc_security_group_ingress_rule" "allow_http_ipv4" {
   to_port           = 80
 }
 
-# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_egress_rule
 resource "aws_vpc_security_group_ingress_rule" "allow_ssh_ipv4" {
   security_group_id = aws_security_group.allow_http.id
   cidr_ipv4         = "0.0.0.0/0"
@@ -68,6 +61,14 @@ resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
   security_group_id = aws_security_group.allow_http.id
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "-1" # semantically equivalent to all ports
+}
+
+data "aws_security_group" "coursera-project" {
+    depends_on = [ aws_security_group.allow_http ]
+    filter {
+    name = "tag:Name"
+    values = [var.tag-name]
+  }
 }
 
 # Create VPC DHCP options -- public DNS provided by Amazon
@@ -83,6 +84,7 @@ resource "aws_vpc_dhcp_options" "project" {
 
 # Associate these options with our VPC now
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_dhcp_options
+
 resource "aws_vpc_dhcp_options_association" "dns_resolver" {
   vpc_id          = aws_vpc.project.id
   dhcp_options_id = aws_vpc_dhcp_options.project.id
@@ -115,9 +117,6 @@ resource "aws_route_table" "example" {
 # Now we need to associate the route_table to subnets
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table_association
 resource "aws_route_table_association" "subnets" {
-  # This method is a little hard-coded hack - we use the count feature
-  # which acts as a for loop attaching a route table to multiple subnets at once
-  # We could do this verbose but this saves us extra coding and will work in any Region
   count = var.number-of-azs
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.example.id
@@ -132,8 +131,9 @@ resource "aws_main_route_table_association" "a" {
 
 # IAM instance policy
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_instance_profile
+
 resource "aws_iam_instance_profile" "coursera_profile" {
-  name = "coursera-instance-profile"
+  name = "coursera_profile"
   role = aws_iam_role.role.name
 }
 
@@ -156,6 +156,10 @@ resource "aws_iam_role" "role" {
   name               = "project_role"
   path               = "/"
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
+
+  tags = {
+    Name = var.tag-name
+  }
 }
 
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy
@@ -178,6 +182,29 @@ resource "aws_iam_role_policy" "s3_fullaccess_policy" {
     ]
   })
 }
+
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy
+resource "aws_iam_role_policy" "rds_fullaccess_policy" {
+  name = "rds_fullaccess_policy"
+  role = aws_iam_role.role.id
+
+  # Terraform's "jsonencode" function converts a
+  # Terraform expression result to valid JSON syntax.
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "rds:*",
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      },
+    ]
+  })
+}
+
+# add additional aws iam role policies here
 
 # creating a private IPv4 subnet per AZ
 # https://stackoverflow.com/questions/63991120/automatically-create-a-subnet-for-each-aws-availability-zone-in-terraform
@@ -219,12 +246,14 @@ output "aws_subnets" {
 ##############################################################################
 resource "aws_launch_template" "lt" {
   image_id                             = var.imageid
-  instance_initiated_shutdown_behavior ="terminate"
+  instance_initiated_shutdown_behavior = "terminate"
   instance_type                        = var.instance-type
   key_name                             = var.key-name
   vpc_security_group_ids               = [aws_security_group.allow_http.id]
-  iam_instance_profile {
-    name = var.instance-type
+  # add aws_iam_instance_profile here
+
+  monitoring {
+    enabled = false
   }
 
   tag_specifications {
@@ -257,7 +286,7 @@ resource "aws_autoscaling_group" "asg" {
   vpc_zone_identifier = [for subnet in aws_subnet.private : subnet.id]
 
   tag {
-    key                 = "Name"
+    key                 = "assessment"
     value               = var.tag-name
     propagate_at_launch = true
   }
@@ -276,8 +305,10 @@ resource "aws_lb" "lb" {
   name               = var.elb-name
   internal           = false
   load_balancer_type = "application"
+  #security_groups    = [var.vpc_security_group_ids]
   security_groups = [aws_security_group.allow_http.id]
   # Place across all subnets
+  #subnets            = aws_subnet.private.ids
   subnets = [for subnet in aws_subnet.private : subnet.id]
 
   enable_deletion_protection = false
@@ -296,6 +327,7 @@ output "url" {
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/autoscaling_attachment
 ##############################################################################
 # Create a new ALB Target Group attachment
+
 resource "aws_autoscaling_attachment" "example" {
   # Wait for lb to be running before attaching to asg
   depends_on  = [aws_lb.lb]
@@ -349,26 +381,13 @@ resource "aws_lb_listener" "front_end" {
 ##############################################################################
 
 resource "aws_s3_bucket" "raw-bucket" {
-  # Create bucket name and use force_destroy
   bucket = var.raw-s3-bucket
   force_destroy = true
-
-  tags = {
-    Name        = var.tag-name
-    Environment = "Dev"
-  }
 }
 
-
 resource "aws_s3_bucket" "finished-bucket" {
-  # Create bucket name and use force_destroy
   bucket = var.finished-s3-bucket
   force_destroy = true
-
-  tags = {
-    Name        = var.tag-name
-    Environment = "Dev"
-  }
 }
 
 resource "aws_s3_bucket_public_access_block" "allow_access_from_another_account-raw" {
@@ -412,9 +431,7 @@ data "aws_iam_policy_document" "allow_access_from_another_account-raw" {
     }
 
     actions = [
-      "s3:GetObject",
-      "s3:PutObject",
-      "s3:ListBucket"
+      "s3:GetObject"
     ]
 
     resources = [
@@ -440,4 +457,130 @@ data "aws_iam_policy_document" "allow_access_from_another_account-finished" {
       "${aws_s3_bucket.finished-bucket.arn}/*",
     ]
   }
+}
+
+# Create SQS Queue
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sqs_queue
+resource "aws_sqs_queue" "coursera_queue" {
+  name                      = var.sqs-name
+  delay_seconds             = 90
+  message_retention_seconds = 86400
+  receive_wait_time_seconds = 10
+  # Default is 30 seconds
+  visibility_timeout_seconds = 300
+
+  tags = {
+    Name = var.tag-name
+  }
+}
+
+# Create SNS Topics
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic
+resource "aws_sns_topic" "user_updates" {
+
+# complete missing values here
+
+}
+
+# Generate random password -- this way its never hardcoded into our variables and inserted directly as a secretcheck 
+# No one will know what it is!
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/secretsmanager_random_password
+data "aws_secretsmanager_random_password" "coursera_project" {
+  password_length = 30
+  exclude_numbers = true
+  exclude_punctuation = true
+}
+
+# Create the actual secret (not adding a value yet)
+# Provides a resource to manage AWS Secrets Manager secret metadata. To manage
+# secret rotation, see the aws_secretsmanager_secret_rotation resource. To 
+# manage a secret value, see the aws_secretsmanager_secret_version resource.
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret
+resource "aws_secretsmanager_secret" "coursera_project_username" {
+  name = "uname"
+  # https://github.com/hashicorp/terraform-provider-aws/issues/4467
+  # This will automatically delete the secret upon Terraform destroy 
+  recovery_window_in_days = 0
+  tags = {
+    Name = var.tag-name
+  }
+}
+
+resource "aws_secretsmanager_secret" "coursera_project_password" {
+  name = "pword"
+  # https://github.com/hashicorp/terraform-provider-aws/issues/4467
+  # This will automatically delete the secret upon Terraform destroy 
+  recovery_window_in_days = 0
+  tags = {
+    Name = var.tag-name
+  }
+}
+
+# Provides a resource to manage AWS Secrets Manager secret version including its secret value.
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version
+# Used to set the value
+resource "aws_secretsmanager_secret_version" "coursera_project_username" {
+  #depends_on = [ aws_secretsmanager_secret_version.project_username ]
+  secret_id     = aws_secretsmanager_secret.coursera_project_username.id
+  secret_string = var.username
+}
+
+resource "aws_secretsmanager_secret_version" "coursera_project_password" {
+  #depends_on = [ aws_secretsmanager_secret_version.project_password ]
+  secret_id     = aws_secretsmanager_secret.coursera_project_password.id
+  secret_string = data.aws_secretsmanager_random_password.coursera_project.random_password
+}
+
+# Retrieve secrets value set in secret manager
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/secretsmanager_secret_version
+# https://github.com/hashicorp/terraform-provider-aws/issues/14322
+data "aws_secretsmanager_secret_version" "project_username" {
+  depends_on = [ aws_secretsmanager_secret_version.coursera_project_username ]
+  secret_id = aws_secretsmanager_secret.coursera_project_username.id
+}
+
+data "aws_secretsmanager_secret_version" "project_password" {
+  depends_on = [ aws_secretsmanager_secret_version.coursera_project_password ]
+  secret_id = aws_secretsmanager_secret.coursera_project_password.id
+}
+
+# Create a dbsubnet group to assign our database to our custom created subnets and vpc
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_subnet_group
+resource "aws_db_subnet_group" "default" {
+  name       = "coursera-project"
+  subnet_ids = [for subnet in aws_subnet.private : subnet.id]
+
+  tags = {
+    Name = var.tag-name
+  }
+}
+
+# Return the subnetgroup id
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/db_subnet_group
+data "aws_db_subnet_group" "database" {
+  depends_on = [ aws_db_subnet_group.default ]
+  name = "coursera-project"
+}
+
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/db_snapshot
+# Use the latest production snapshot to create a dev instance.
+resource "aws_db_instance" "default" {
+  instance_class      = "db.t3.micro"
+  #db_name             = var.dbname
+  snapshot_identifier = var.snapshot_identifier
+  skip_final_snapshot  = true
+  username             = data.aws_secretsmanager_secret_version.project_username.secret_string
+  password             = data.aws_secretsmanager_secret_version.project_password.secret_string
+  vpc_security_group_ids = [data.aws_security_group.coursera-project.id]
+  # Add db subnet group here
+}
+
+output "db-address" {
+  description = "Endpoint URL "
+  value = aws_db_instance.default.address
+}
+
+output "db-name" {
+  description = "DB Name "
+  value = aws_db_instance.default.db_name
 }
