@@ -5,8 +5,12 @@
 # With a CIDR block of 172.32.0.0/16
 # Enable_dns_hostnames
 resource "aws_vpc" "project" {
-  cidr_block           = "172.32.0.0/16"
-  enable_dns_hostnames = true
+cidr_block = "172.32.0.0/16"
+enable_dns_hostnames = true
+
+tags = {
+  Name = var.tag-name
+}
 }
 
 # Query the VPC information
@@ -30,23 +34,15 @@ output "list-of-azs" {
 # Don't forget the egress rules!!!
 # 
 resource "aws_security_group" "allow_http" {
-  name        = "allow_http"
-  description = "Allow HTTP inbound and all outbound"
-  vpc_id      = aws_vpc.main.id
-}
+    name         = "allow_http"
+    description  = "allow http inbound and outbound traffic - created by ops team"
+    vpc_id       = aws_vpc.project.id
 
-resource "aws_vpc_security_group_ingress_rule" "http_ipv4" {
-  security_group_id = aws_security_group.allow_http.id
-  cidr_ipv4         = "0.0.0.0/0"
-  from_port         = 80
-  to_port           = 80
-  ip_protocol       = "tcp"
-}
+    tags = {
+            Name = var.tag-name
+            proto = "http"
 
-resource "aws_vpc_security_group_egress_rule" "egress_all" {
-  security_group_id = aws_security_group.allow_http.id
-  cidr_ipv4         = "0.0.0.0/0"
-  ip_protocol       = "-1"
+          }
 }
 
 
@@ -61,11 +57,11 @@ resource "aws_vpc_security_group_ingress_rule" "allow_http_ipv4" {
 
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_egress_rule
 resource "aws_vpc_security_group_ingress_rule" "allow_ssh_ipv4" {
-  security_group_id = aws_security_group.allow_ssh.id
-  cidr_ipv4   = "10.0.0.0/8"
-  from_port   = 80
-  ip_protocol = "tcp"
-  to_port     = 80
+  security_group_id = aws_security_group.allow_http.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 22
+  ip_protocol       = "tcp"
+  to_port           = 22
 }
 
 resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
@@ -138,8 +134,8 @@ resource "aws_main_route_table_association" "a" {
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_instance_profile
 resource "aws_iam_instance_profile" "coursera_profile" {
   # Give it a name
-  name = "coursera_profile"
-  role = aws_iam_role.role.name
+  name = "coursera-instance-profile" 
+  role = aws_iam_role.coursera_role.name
 }
 
 # Creating the policy (rules) for what the role can do
@@ -224,16 +220,12 @@ output "aws_subnets" {
 ##############################################################################
 resource "aws_launch_template" "lt" {
   image_id                             = var.imageid
-  instance_initiated_shutdown_behavior = "terminate"
+  instance_initiated_shutdown_behavior ="terminate"
   instance_type                        = var.instance-type
   key_name                             = var.key-name
   vpc_security_group_ids               = [aws_security_group.allow_http.id]
   iam_instance_profile {
-    name = aws_iam_instance_profile.coursera_profile.name
-  }
-
-  monitoring {
-    enabled = "false"
+    name = var.instance-type
   }
 
   tag_specifications {
@@ -251,7 +243,7 @@ resource "aws_launch_template" "lt" {
 ##############################################################################
 
 resource "aws_autoscaling_group" "asg" {
-  name                      = var.asg-name
+  name                      = var.elb-name
   depends_on                = [aws_launch_template.lt]
   desired_capacity          = var.desired
   max_size                  = var.max
@@ -285,7 +277,7 @@ resource "aws_lb" "lb" {
   name               = var.elb-name
   internal           = false
   load_balancer_type = "application"
-  security_groups = [aws_security_group.lb.id]
+  security_groups = [aws_security_group.allow_http.id]
   # Place across all subnets
   subnets = [for subnet in aws_subnet.private : subnet.id]
 
@@ -359,14 +351,25 @@ resource "aws_lb_listener" "front_end" {
 
 resource "aws_s3_bucket" "raw-bucket" {
   # Create bucket name and use force_destroy
-  bucket        = var.raw-s3-bucket
+  bucket = var.raw-s3-bucket
   force_destroy = true
+
+  tags = {
+    Name        = var.tag-name
+    Environment = "Dev"
+  }
 }
+
 
 resource "aws_s3_bucket" "finished-bucket" {
   # Create bucket name and use force_destroy
-    bucket        = var.finished-s3-bucket
+  bucket = var.finished-s3-bucket
   force_destroy = true
+
+  tags = {
+    Name        = var.tag-name
+    Environment = "Dev"
+  }
 }
 
 resource "aws_s3_bucket_public_access_block" "allow_access_from_another_account-raw" {
@@ -391,7 +394,7 @@ resource "aws_s3_bucket_public_access_block" "allow_access_from_another_account-
 }
 
 resource "aws_s3_bucket_policy" "allow_access_from_another_account-raw" {
-  depends_on  = [aws_s3_bucket_public_access_block.allow_access_from_another_account-raw]
+  depends_on  = [aws_s3_bucket_public_access_block.allow_access_from_another_account-finished-raw]
   bucket = aws_s3_bucket.raw-bucket.id
   policy = data.aws_iam_policy_document.allow_access_from_another_account-raw.json
 }
@@ -430,8 +433,7 @@ data "aws_iam_policy_document" "allow_access_from_another_account-finished" {
     }
 
     actions = [
-      "s3:GetObject",
-      "s3:PutObject"
+      "s3:GetObject"
     ]
 
     resources = [
