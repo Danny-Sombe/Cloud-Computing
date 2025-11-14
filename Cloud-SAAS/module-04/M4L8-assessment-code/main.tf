@@ -477,9 +477,12 @@ resource "aws_sqs_queue" "coursera_queue" {
 # Create SNS Topics
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic
 resource "aws_sns_topic" "user_updates" {
+  name = var.user-sns-topic
 
-# complete missing values here
-
+  tags = {
+    Name        = var.tag-name
+    Environment = "project"
+  }
 }
 
 # Generate random password -- this way its never hardcoded into our variables and inserted directly as a secretcheck 
