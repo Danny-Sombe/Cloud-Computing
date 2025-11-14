@@ -133,7 +133,7 @@ resource "aws_main_route_table_association" "a" {
 # IAM instance policy
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_instance_profile
 resource "aws_iam_instance_profile" "coursera_profile" {
-  name = "coursera-instance-profile"
+  name = "coursera-profile"
   role = aws_iam_role.role.name
 }
 
@@ -156,6 +156,10 @@ resource "aws_iam_role" "role" {
   name               = "project_role"
   path               = "/"
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
+
+    tags = {
+    Name = var.tag-name
+  }
 }
 
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy
