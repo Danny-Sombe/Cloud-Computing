@@ -570,14 +570,22 @@ data "aws_db_subnet_group" "database" {
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/db_snapshot
 # Use the latest production snapshot to create a dev instance.
 resource "aws_db_instance" "default" {
-  instance_class      = "db.t3.micro"
-  #db_name             = var.dbname
-  snapshot_identifier = var.snapshot_identifier
-  skip_final_snapshot  = true
-  username             = data.aws_secretsmanager_secret_version.project_username.secret_string
-  password             = data.aws_secretsmanager_secret_version.project_password.secret_string
+  depends_on             = [ aws_secretsmanager_secret_version.coursera_project_password, aws_secretsmanager_secret_version.coursera_project_username ]
+  allocated_storage      = 10
+  engine                 = "mysql"
+  engine_version         = "8.0" 
+  instance_class         = "db.t3.micro"
+  parameter_group_name   = "default.mysql8.0" 
+  db_name                = var.dbname
+  snapshot_identifier    = var.snapshot_identifier
+  skip_final_snapshot    = true
+  username               = data.aws_secretsmanager_secret_version.project_username.secret_string
+  password               = data.aws_secretsmanager_secret_version.project_password.secret_string
   vpc_security_group_ids = [data.aws_security_group.coursera-project.id]
   # Add db subnet group here
+  db_subnet_group_name   = aws_db_subnet_group.default.name
+
+
 }
 
 output "db-address" {
