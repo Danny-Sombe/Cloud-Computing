@@ -2,7 +2,7 @@
 # Find the Ubuntu server 22.04 AMI for your region at this URL
 # https://cloud-images.ubuntu.com/locator/ec2/
 # Custom AMI ID
-imageid                = "ami-0b8d527345fdace59"
+imageid                = "ami-051e62c2b2b0f9f33"
 # Use t2.micro for the AWS Free Tier
 instance-type          = "t2.micro"
 key-name               = "sonnlogix-key"
