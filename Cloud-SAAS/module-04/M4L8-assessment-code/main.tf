@@ -57,6 +57,14 @@ resource "aws_vpc_security_group_ingress_rule" "allow_ssh_ipv4" {
   to_port           = 22
 }
 
+resource "aws_vpc_security_group_ingress_rule" "allow_mysql" {
+  security_group_id = aws_security_group.allow_http.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 3306
+  ip_protocol       = "tcp"
+  to_port           = 3306
+}
+
 resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
   security_group_id = aws_security_group.allow_http.id
   cidr_ipv4         = "0.0.0.0/0"
@@ -205,7 +213,46 @@ resource "aws_iam_role_policy" "rds_fullaccess_policy" {
 }
 
 # add additional aws iam role policies here
+resource "aws_iam_role_policy" "sns_fullaccess_policy" {
+  name = "sns_fullaccess_policy"
+  role = aws_iam_role.role.id
 
+  # Terraform's "jsonencode" function converts a
+  # Terraform expression result to valid JSON syntax.
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "sns:*",
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      },
+    ]
+  })
+}
+
+# creating Secret manager policy
+resource "aws_iam_role_policy" "sm_fullaccess_policy" {
+  name = "sm_fullaccess_policy"
+  role = aws_iam_role.role.id
+
+  # Terraform's "jsonencode" function converts a
+  # Terraform expression result to valid JSON syntax.
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "secretsmanager:*",
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      },
+    ]
+  })
+}
 # creating a private IPv4 subnet per AZ
 # https://stackoverflow.com/questions/63991120/automatically-create-a-subnet-for-each-aws-availability-zone-in-terraform
 # https://stackoverflow.com/questions/26706683/ec2-t2-micro-instance-has-no-public-dns
@@ -570,20 +617,19 @@ data "aws_db_subnet_group" "database" {
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/db_snapshot
 # Use the latest production snapshot to create a dev instance.
 resource "aws_db_instance" "default" {
-  depends_on             = [ aws_secretsmanager_secret_version.coursera_project_password, aws_secretsmanager_secret_version.coursera_project_username ]
-  allocated_storage      = 10
-  engine                 = "mysql"
-  engine_version         = "8.0" 
+ # allocated_storage      = 10
+ # engine                 = "mysql"
+ # engine_version         = "8.0" 
+  # parameter_group_name   = "default.mysql8.0" 
+ # db_name                = var.dbname
   instance_class         = "db.t3.micro"
-  parameter_group_name   = "default.mysql8.0" 
-  db_name                = var.dbname
   snapshot_identifier    = var.snapshot_identifier
   skip_final_snapshot    = true
   username               = data.aws_secretsmanager_secret_version.project_username.secret_string
   password               = data.aws_secretsmanager_secret_version.project_password.secret_string
   vpc_security_group_ids = [data.aws_security_group.coursera-project.id]
   # Add db subnet group here
-  db_subnet_group_name   = aws_db_subnet_group.default.name
+  db_subnet_group_name   = data.aws_db_subnet_group.databases.id
 
 
 }
