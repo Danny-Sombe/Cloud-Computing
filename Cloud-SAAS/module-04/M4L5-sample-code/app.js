@@ -6,13 +6,13 @@ const multerS3 = require("multer-s3");
 
 const { S3Client, ListBucketsCommand, ListObjectsCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
 
-const REGION = "us-east-2"; //e.g. "us-east-1";
+const REGION = "ap-southeast-2"; //e.g. "us-east-1";
 const s3 = new S3Client({ region: REGION });
 ///////////////////////////////////////////////////////////////////////////
 // I hardcoded my S3 bucket name, this you need to determine dynamically
 // Using the AWS JavaScript SDK
 ///////////////////////////////////////////////////////////////////////////
-var bucketName = 'Edit-this-value-to-be-your-raw-bucket-name-in-your-terraform.tfvars';
+var bucketName = 'sonnlogix-raw-bucket';
 //listBuckets().then(result =>{bucketName = result;}).catch(err=>{console.error("listBuckets function call failed.")});
 	var upload = multer({
         storage: multerS3({
@@ -27,10 +27,10 @@ var bucketName = 'Edit-this-value-to-be-your-raw-bucket-name-in-your-terraform.t
 //////////////////////////////////////////////////////////
 // Add S3 ListBucket code
 //
-var bucket_name = "";
+var bucket_name = "sonnlogix-raw-s3-bucket";
 const listBuckets = async () => {
 
-	const client = new S3Client({region: "us-east-2" });
+	const client = new S3Client({region: "ap-southeast-2" });
         const command = new ListBucketsCommand({});
 	try {
 		const results = await client.send(command);
@@ -56,7 +56,7 @@ const listBuckets = async () => {
 // https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-s3/interfaces/listobjectscommandoutput.html
 // 
 const listObjects = async (req,res) => {
-	const client = new S3Client({region: "us-east-2" });
+	const client = new S3Client({region: "ap-southeast-2" });
 	const command = new ListObjectsCommand(await listBuckets());
 	try {
 		const results = await client.send(command);
