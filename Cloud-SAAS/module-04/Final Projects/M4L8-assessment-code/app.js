@@ -426,7 +426,7 @@ const subscribeEmailToSNSTopic = async () => {
   let topicArn = await getListOfSnsTopics();
   const params = {
     // CHANGE ENDPOINT EMAIL TO YOUR OWN
-    Endpoint: "solutiontech954@gmail.com",
+    Endpoint: "dsombe@hawk.iit.edu",
     Protocol: "email",
     TopicArn: topicArn.Topics[0].TopicArn,
   };
