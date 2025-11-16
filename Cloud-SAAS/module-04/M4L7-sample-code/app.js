@@ -31,13 +31,13 @@ const {
 } = require("@aws-sdk/client-rds");
 
 const { v4: uuidv4 } = require("uuid");
-const REGION = "us-east-2"; //e.g. "us-east-1";
+const REGION = "ap-southeast-2"; //e.g. "us-east-1";
 const s3 = new S3Client({ region: REGION });
 ///////////////////////////////////////////////////////////////////////////
 // I hardcoded my S3 bucket name, this you need to determine dynamically
 // Using the AWS JavaScript SDK
 ///////////////////////////////////////////////////////////////////////////
-var bucketName = 'jrh-raw-bucket';
+var bucketName = 'sonnlogix-raw-s3-bucket';
 //listBuckets().then(result =>{bucketName = result;}).catch(err=>{console.error("listBuckets function call failed.")});
 	var upload = multer({
         storage: multerS3({
@@ -54,13 +54,13 @@ var bucketName = 'jrh-raw-bucket';
 //
 const listAndCacheBuckets = async () => {
 
-	const client = new S3Client({region: "us-east-2" });
+	const client = new S3Client({region: "ap-southeast-2" });
         const command = new ListBucketsCommand({});
 	try {
 		const results = await client.send(command);
 		//console.log("List Buckets Results: ", results.Buckets[0].Name);
 		const params = {
-			Bucket: 'raw-jrh-mp1'
+			Bucket: 'raw-sonnlogix-mp1'
 		}
 		return params;
 } catch (err) {
@@ -73,7 +73,7 @@ const listAndCacheBuckets = async () => {
 var bucket_name = "";
 const listBuckets = async () => {
 
-	const client = new S3Client({region: "us-east-2" });
+	const client = new S3Client({region: "ap-southeast-2" });
         const command = new ListBucketsCommand({});
 	try {
 		const results = await client.send(command);
@@ -99,7 +99,7 @@ const listBuckets = async () => {
 // https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-s3/interfaces/listobjectscommandoutput.html
 // 
 const listObjects = async (req,res) => {
-	const client = new S3Client({region: "us-east-2" });
+	const client = new S3Client({region: "ap-southeast-2" });
 	const command = new ListObjectsCommand(await listBuckets());
 	try {
 		const results = await client.send(command);
@@ -171,7 +171,7 @@ const getImagesFromS3Bucket = async (req,res) => {
 // Lookup Database Identifier
 //
 const getDBIdentifier = async () => {
-        const client = new RDSClient({ region: "us-east-2" });
+        const client = new RDSClient({ region: "ap-southeast-2" });
         const command = new DescribeDBInstancesCommand({});
         try {
           const results = await client.send(command);
@@ -328,7 +328,7 @@ const getUname = async () => {
   const params = {
     SecretId: "uname",
   };
-  const client = new SecretsManagerClient({ region: "us-east-2" });
+  const client = new SecretsManagerClient({ region: "ap-southeast-2" });
   const command = new GetSecretValueCommand(params);
   try {
     const results = await client.send(command);
@@ -351,7 +351,7 @@ const getPword = async () => {
   const params = {
     SecretId: "pword",
   };
-  const client = new SecretsManagerClient({ region: "us-east-2" });
+  const client = new SecretsManagerClient({ region: "ap-southeast-2" });
   const command = new GetSecretValueCommand(params);
   try {
     const results = await client.send(command);
@@ -367,7 +367,7 @@ const getPword = async () => {
 //
 
 const getListOfSnsTopics = async () => {
-  const client = new SNSClient({ region: "us-east-2" });
+  const client = new SNSClient({ region: "ap-southeast-2" });
   const command = new ListTopicsCommand({});
   try {
     const results = await client.send(command);
@@ -389,7 +389,7 @@ const getSnsTopicArn = async () => {
   const params = {
     TopicArn: snsTopicArn.Topics[0].TopicArn,
   };
-  const client = new SNSClient({ region: "us-east-2" });
+  const client = new SNSClient({ region: "ap-southeast-2" });
   const command = new GetTopicAttributesCommand(params);
   try {
     const results = await client.send(command);
@@ -407,11 +407,11 @@ const subscribeEmailToSNSTopic = async () => {
   let topicArn = await getListOfSnsTopics();
   const params = {
     // CHANGE ENDPOINT EMAIL TO YOUR OWN
-    Endpoint: "hajek@iit.edu",
+    Endpoint: "dsombe@hawk.iit.edu",
     Protocol: "email",
     TopicArn: topicArn.Topics[0].TopicArn,
   };
-  const client = new SNSClient({ region: "us-east-2" });
+  const client = new SNSClient({ region: "ap-southeast-2" });
   const command = new SubscribeCommand(params);
   try {
     const results = await client.send(command);
@@ -443,7 +443,7 @@ const sendMessageViaEmail = async (req, res) => {
     Message: s3URL,
     TopicArn: snsTopicArn.Topics[0].TopicArn,
   };
-  const client = new SNSClient({ region: "us-east-2" });
+  const client = new SNSClient({ region:"ap-southeast-2" });
   const command = new PublishCommand(params);
   try {
     const results = await client.send(command);
