@@ -389,7 +389,7 @@ print("\r")
 # named: coursera-snapshot
 ##############################################################################
 print('*' * 79)
-print("Check the existence of an RDS instance tagged module-04 and a snapshot named: coursera-snapshot")
+print("Check the existence of an RDS instance tagged module-04 and a snapshot named: sonnlogix-snapshots")
 snapShotNameMatch = False
 countOfRDSInstanceCorrect = False
 
