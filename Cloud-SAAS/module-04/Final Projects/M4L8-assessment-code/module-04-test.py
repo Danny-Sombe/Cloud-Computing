@@ -13,7 +13,7 @@ from tqdm import tqdm
 grandtotal = 0
 totalPoints = 10
 assessmentName = "module-04-assessment"
-snapshotname                     = "sonnlogix-snapshots"
+snapshotname                     = "coursera-snapshot"
 correctNumberOfDBAcrossSubnets   = 3
 correctNumOfDBSubnetGroups       = 1
 correctNumberOfSecrets           = 2
@@ -389,7 +389,7 @@ print("\r")
 # named: coursera-snapshot
 ##############################################################################
 print('*' * 79)
-print("Check the existence of an RDS instance tagged module-04 and a snapshot named: sonnlogix-snapshots")
+print("Check the existence of an RDS instance tagged module-04 and a snapshot named: coursera-snapshot")
 snapShotNameMatch = False
 countOfRDSInstanceCorrect = False
 

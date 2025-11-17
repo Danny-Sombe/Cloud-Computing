@@ -44,11 +44,11 @@ sudo -u ubuntu git clone git@github.com:Danny-Sombe/Cloud-Computing.git
 
 # Start the nodejs app where it is located via PM2
 # https://pm2.keymetrics.io/docs/usage/quick-start
-cd /home/ubuntu/Cloud-Computing/Cloud-SAAS/module-04/M4L8-sample-code/M4L8-sample-code
+cd /home/ubuntu/Cloud-Computing/Cloud-SAAS/module-04/Final Projects/M4L8-assessment-code/M4L8-assessment-code
 # Pull latest changes
 #sudo -u ubuntu git pull
 
-sudo cp /home/ubuntu/Cloud-Computing/Cloud-SAAS/module-04/M4L8-sample-code/M4L8-sample-code/default /etc/nginx/sites-available/default
+sudo cp /home/ubuntu/Cloud-Computing/Cloud-SAAS/module-04/Final Projects/M4L8-assessment/M4L8-assessment-code-code/default /etc/nginx/sites-available/default
 sudo systemctl daemon-reload
 sudo systemctl restart nginx
 
