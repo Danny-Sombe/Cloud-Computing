@@ -434,7 +434,7 @@ if len(responsesm['SecretList']) == correctNumberOfSecrets:
  print("and they are tagged correctly: " + tag + "...")
  numOfSec = True
 else:
-  print("You have the incorrect number of secrets: " + + str(len(responsesm['SecretList'])))
+  print("You have the incorrect number of secrets: " + str(len(responsesm['SecretList'])))
   print("They are tagged:")
   for x in range(len(responsesm['SecretList'])):
     print(responsesm['SecretList'][x]['tags'][0]['Values'])
