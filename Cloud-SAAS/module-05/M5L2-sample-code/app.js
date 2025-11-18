@@ -542,7 +542,7 @@ app.get("/", function (req, res) {
         (async () => { await getListOfSnsTopics(); })();
         (async () => { await getSnsTopicArn() })();
         (async () => { await subscribeEmailToSNSTopic() } ) ();
-        //(async () => { await sendMessageViaEmail(req,res) } ) ();
+        (async () => { await sendMessageViaEmail(req,res) } ) ();
         (async () => { await insertRecord(req, res);})();
         (async () => { await sendMessageToQueue(req,res); }) ();
         // add SQS message here, includes DB record UUID,
