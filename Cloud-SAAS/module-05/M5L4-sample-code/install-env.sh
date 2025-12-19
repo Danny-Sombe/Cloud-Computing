@@ -40,15 +40,15 @@ sudo npm install pm2 -g
 ####################################################################
 # Note - change "hajek.git" to be your private repo name (hawk ID) #
 ####################################################################
-sudo -u ubuntu git clone git@github.com:jhajek/coursera-cloud-computing.git
+sudo -u ubuntu git clone git@github.com:Danny-Sombe/Cloud-Computing.git
 
 # Start the nodejs app where it is located via PM2
 # https://pm2.keymetrics.io/docs/usage/quick-start
-cd /home/ubuntu/coursera-cloud-computing/itmo-463-563/M5L4
+cd /home/ubuntu/Cloud-Computing/Cloud-SAAS/module-05/M5L4-sample-code
 # Pull latest changes
 #sudo -u ubuntu git pull
 
-sudo cp /home/ubuntu/coursera-cloud-computing/itmo-463-563/M5L4/default /etc/nginx/sites-available/default
+sudo cp /home/ubuntu/Cloud-Computing/Cloud-SAAS/module-05/M5L4-sample-code/default /etc/nginx/sites-available/default
 sudo systemctl daemon-reload
 sudo systemctl restart nginx
 
