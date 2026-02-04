@@ -1,3 +1,18 @@
+###########################################################################################
+# create 1 ec2 instances
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/instances
+resources "aws_instance" "helloworld" {
+  ami                        = var.imageid
+  instances_type             = var.instance-type
+  key_name                   = var.key-name
+  vpc_security_group_ids     = [var.vpc_security_group_ids]
+
+  tags = {
+    Name = var.tag-name
+  }   
+}
+
+
 ##############################################################################
 # Create and RDS Mysql database - get dbname, username, and password using the
 # ${var} function
