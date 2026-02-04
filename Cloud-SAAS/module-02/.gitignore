@@ -1,1 +1,21 @@
+# Cache objects
+packer_cache/
+
+# Crash log
+crash.log
+
+#https://www.packer.io/guides/hcl/variables
+# exclude all .pkrvars.hcl files, which are likely to contain sensitive data
+# such as password, private keys, and other secrets. these should not be  
+# version control as they are data points which are potential sensitive
+# subject to change depending on the environment
+#
+*.pkrvars.hcl
+
+# for build boxes
+*.boxes
+
+# dont add the hidden terraform directory where libraries come
+
 .terraform/
+.terraform.lock.hcl
