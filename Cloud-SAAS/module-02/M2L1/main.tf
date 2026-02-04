@@ -1,7 +1,7 @@
 ###########################################################################################
 # create 1 ec2 instances
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/instances
-resources "aws_instance" "helloworld" {
+resource "aws_instance" "helloworld" {
   ami                        = var.imageid
   instances_type             = var.instance-type
   key_name                   = var.key-name
