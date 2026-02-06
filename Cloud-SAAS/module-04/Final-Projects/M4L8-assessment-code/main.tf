@@ -561,13 +561,13 @@ resource "aws_secretsmanager_secret" "coursera_project_password" {
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version
 # Used to set the value
 resource "aws_secretsmanager_secret_version" "coursera_project_username" {
-  #depends_on = [ aws_secretsmanager_secret_version.project_username ]
+  depends_on = [ aws_secretsmanager_secret_version.project_username ]
   secret_id     = aws_secretsmanager_secret.coursera_project_username.id
   secret_string = var.username
 }
 
 resource "aws_secretsmanager_secret_version" "coursera_project_password" {
-  #depends_on = [ aws_secretsmanager_secret_version.project_password ]
+  depends_on = [ aws_secretsmanager_secret_version.project_password ]
   secret_id     = aws_secretsmanager_secret.coursera_project_password.id
   secret_string = data.aws_secretsmanager_random_password.coursera_project.random_password
 }
