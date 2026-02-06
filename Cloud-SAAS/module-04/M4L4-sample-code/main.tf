@@ -63,6 +63,14 @@ resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
   ip_protocol       = "-1" # semantically equivalent to all ports
 }
 
+data "aws_security_group" "coursera-project" {
+    depends_on = [ aws_security_group.allow_http ]
+    filter {
+    name = "tag:Name"
+    values = [var.tag-name]
+  }
+}
+
 # Create VPC DHCP options -- public DNS provided by Amazon
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_dhcp_options
 resource "aws_vpc_dhcp_options" "project" {
@@ -148,6 +156,10 @@ resource "aws_iam_role" "role" {
   name               = "project_role"
   path               = "/"
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
+
+  tags = {
+    Name = var.tag-name
+  }
 }
 
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy
@@ -171,6 +183,28 @@ resource "aws_iam_role_policy" "s3_fullaccess_policy" {
   })
 }
 
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy
+resource "aws_iam_role_policy" "rds_fullaccess_policy" {
+  name = "rds_fullaccess_policy"
+  role = aws_iam_role.role.id
+
+  # Terraform's "jsonencode" function converts a
+  # Terraform expression result to valid JSON syntax.
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "rds:*",
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      },
+    ]
+  })
+}
+
+# add additional aws iam role policies here
 
 # creating a private IPv4 subnet per AZ
 # https://stackoverflow.com/questions/63991120/automatically-create-a-subnet-for-each-aws-availability-zone-in-terraform
@@ -216,9 +250,7 @@ resource "aws_launch_template" "lt" {
   instance_type                        = var.instance-type
   key_name                             = var.key-name
   vpc_security_group_ids               = [aws_security_group.allow_http.id]
-  iam_instance_profile {
-    name = aws_iam_instance_profile.coursera_profile.name
-  }
+  # add aws_iam_instance_profile here
 
   monitoring {
     enabled = false
@@ -425,4 +457,130 @@ data "aws_iam_policy_document" "allow_access_from_another_account-finished" {
       "${aws_s3_bucket.finished-bucket.arn}/*",
     ]
   }
+}
+
+# Create SQS Queue
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sqs_queue
+resource "aws_sqs_queue" "coursera_queue" {
+  name                      = var.sqs-name
+  delay_seconds             = 90
+  message_retention_seconds = 86400
+  receive_wait_time_seconds = 10
+  # Default is 30 seconds
+  visibility_timeout_seconds = 300
+
+  tags = {
+    Name = var.tag-name
+  }
+}
+
+# Create SNS Topics
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic
+resource "aws_sns_topic" "user_updates" {
+
+# complete missing values here
+
+}
+
+# Generate random password -- this way its never hardcoded into our variables and inserted directly as a secretcheck 
+# No one will know what it is!
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/secretsmanager_random_password
+data "aws_secretsmanager_random_password" "coursera_project" {
+  password_length = 30
+  exclude_numbers = true
+  exclude_punctuation = true
+}
+
+# Create the actual secret (not adding a value yet)
+# Provides a resource to manage AWS Secrets Manager secret metadata. To manage
+# secret rotation, see the aws_secretsmanager_secret_rotation resource. To 
+# manage a secret value, see the aws_secretsmanager_secret_version resource.
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret
+resource "aws_secretsmanager_secret" "coursera_project_username" {
+  name = "uname"
+  # https://github.com/hashicorp/terraform-provider-aws/issues/4467
+  # This will automatically delete the secret upon Terraform destroy 
+  recovery_window_in_days = 0
+  tags = {
+    Name = var.tag-name
+  }
+}
+
+resource "aws_secretsmanager_secret" "coursera_project_password" {
+  name = "pword"
+  # https://github.com/hashicorp/terraform-provider-aws/issues/4467
+  # This will automatically delete the secret upon Terraform destroy 
+  recovery_window_in_days = 0
+  tags = {
+    Name = var.tag-name
+  }
+}
+
+# Provides a resource to manage AWS Secrets Manager secret version including its secret value.
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version
+# Used to set the value
+resource "aws_secretsmanager_secret_version" "coursera_project_username" {
+  #depends_on = [ aws_secretsmanager_secret_version.project_username ]
+  secret_id     = aws_secretsmanager_secret.coursera_project_username.id
+  secret_string = var.username
+}
+
+resource "aws_secretsmanager_secret_version" "coursera_project_password" {
+  #depends_on = [ aws_secretsmanager_secret_version.project_password ]
+  secret_id     = aws_secretsmanager_secret.coursera_project_password.id
+  secret_string = data.aws_secretsmanager_random_password.coursera_project.random_password
+}
+
+# Retrieve secrets value set in secret manager
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/secretsmanager_secret_version
+# https://github.com/hashicorp/terraform-provider-aws/issues/14322
+data "aws_secretsmanager_secret_version" "project_username" {
+  depends_on = [ aws_secretsmanager_secret_version.coursera_project_username ]
+  secret_id = aws_secretsmanager_secret.coursera_project_username.id
+}
+
+data "aws_secretsmanager_secret_version" "project_password" {
+  depends_on = [ aws_secretsmanager_secret_version.coursera_project_password ]
+  secret_id = aws_secretsmanager_secret.coursera_project_password.id
+}
+
+# Create a dbsubnet group to assign our database to our custom created subnets and vpc
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_subnet_group
+resource "aws_db_subnet_group" "default" {
+  name       = "coursera-project"
+  subnet_ids = [for subnet in aws_subnet.private : subnet.id]
+
+  tags = {
+    Name = var.tag-name
+  }
+}
+
+# Return the subnetgroup id
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/db_subnet_group
+data "aws_db_subnet_group" "database" {
+  depends_on = [ aws_db_subnet_group.default ]
+  name = "coursera-project"
+}
+
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/db_snapshot
+# Use the latest production snapshot to create a dev instance.
+resource "aws_db_instance" "default" {
+  instance_class      = "db.t3.micro"
+  #db_name             = var.dbname
+  snapshot_identifier = var.snapshot_identifier
+  skip_final_snapshot  = true
+  username             = data.aws_secretsmanager_secret_version.project_username.secret_string
+  password             = data.aws_secretsmanager_secret_version.project_password.secret_string
+  vpc_security_group_ids = [data.aws_security_group.coursera-project.id]
+  # Add db subnet group here
+}
+
+output "db-address" {
+  description = "Endpoint URL "
+  value = aws_db_instance.default.address
+}
+
+output "db-name" {
+  description = "DB Name "
+  value = aws_db_instance.default.db_name
 }
