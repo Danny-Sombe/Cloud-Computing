@@ -624,13 +624,13 @@ resource "aws_db_instance" "default" {
   username             = data.aws_secretsmanager_secret_version.project_username.secret_string
   password             = data.aws_secretsmanager_secret_version.project_password.secret_string
   vpc_security_group_ids = [data.aws_security_group.coursera-project.id]
-  # Add db subnet group here
-  parameter_group_name = "default.mysql8.0"
-  db_subnet_group_name = "my_database_subnet_group"
+ 
+}
+ # Add db subnet group here
+resource "aws_db_subnet_group" "default" {
+  name       = "coursera-project"
+  subnet_ids = [for subnet in aws_subnet.private : subnet.id]
 
-  tags = {
-    Name = var.tag-name
-  }
 }
 
 output "db-address" {
