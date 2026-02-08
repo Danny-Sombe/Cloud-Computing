@@ -625,6 +625,7 @@ resource "aws_db_instance" "default" {
   password             = data.aws_secretsmanager_secret_version.project_password.secret_string
   vpc_security_group_ids = [data.aws_security_group.coursera-project.id]
   # Add db subnet group here
+
 }
 
 output "db-address" {
