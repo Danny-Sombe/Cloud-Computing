@@ -618,19 +618,14 @@ data "aws_db_subnet_group" "database" {
 # Use the latest production snapshot to create a dev instance.
 resource "aws_db_instance" "default" {
   instance_class      = "db.t3.micro"
-  db_name             = var.dbname
+  # db_name             = var.dbname
   snapshot_identifier = var.snapshot_identifier
   skip_final_snapshot  = true
   username             = data.aws_secretsmanager_secret_version.project_username.secret_string
   password             = data.aws_secretsmanager_secret_version.project_password.secret_string
   vpc_security_group_ids = [data.aws_security_group.coursera-project.id]
- 
-}
- # Add db subnet group here
-resource "aws_db_subnet_group" "default" {
-  name       = "coursera-project"
-  subnet_ids = [for subnet in aws_subnet.private : subnet.id]
-
+   # add subnet group here
+  db_subnet_group_name = data.aws_db_subnet_group.database.id
 }
 
 output "db-address" {
