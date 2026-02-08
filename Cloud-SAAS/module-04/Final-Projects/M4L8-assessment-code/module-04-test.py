@@ -13,7 +13,7 @@ from tqdm import tqdm
 grandtotal = 0
 totalPoints = 10
 assessmentName = "module-04-assessment"
-snapshotname                     = "coursera-snapshot"
+snapshotname                     = "sonnlogix-snapshot"
 correctNumberOfDBAcrossSubnets   = 3
 correctNumOfDBSubnetGroups       = 1
 correctNumberOfSecrets           = 2
