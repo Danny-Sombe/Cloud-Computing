@@ -77,6 +77,10 @@ data "aws_security_group" "coursera-project" {
     name = "tag:Name"
     values = [var.tag-name]
   }
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.project.id]
+  }
 }
 
 # Create VPC DHCP options -- public DNS provided by Amazon
@@ -95,6 +99,7 @@ resource "aws_vpc_dhcp_options" "project" {
 
 resource "aws_vpc_dhcp_options_association" "dns_resolver" {
   vpc_id          = aws_vpc.project.id
+  
   dhcp_options_id = aws_vpc_dhcp_options.project.id
 }
 
