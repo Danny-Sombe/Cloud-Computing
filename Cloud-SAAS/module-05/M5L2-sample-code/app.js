@@ -3,6 +3,7 @@ const express = require('express')
 const app = express();
 const multer = require("multer");
 const multerS3 = require("multer-s3");
+const AWS = require('aws-sdk');
 
 const { 
   S3Client, 
@@ -43,6 +44,8 @@ const { v4: uuidv4 } = require("uuid");
 //////////////////////////////////////////////////////////////////////////////
 const REGION = "ap-southeast-2"; //e.g. "us-east-1";
 const s3 = new S3Client({ region: REGION });
+// Create an AWS SDK v2 S3 client for use with multer-s3 (which expects v2)
+const s3v2 = new AWS.S3({ region: REGION });
 ///////////////////////////////////////////////////////////////////////////
 // I hardcoded my S3 bucket name, this you need to determine dynamically
 // Using the AWS JavaScript SDK
@@ -50,14 +53,15 @@ const s3 = new S3Client({ region: REGION });
 var bucketName = 'sonnlogix-raw-s3-bucket';
 //listBuckets().then(result =>{bucketName = result;}).catch(err=>{console.error("listBuckets function call failed.")});
 	var upload = multer({
-        storage: multerS3({
-        s3: s3,
-        bucket: bucketName,
-        key: function (req, file, cb) {
-            cb(null, file.originalname);
-            }
+  storage: multerS3({
+  // multer-s3 expects an AWS.S3 (v2) instance
+  s3: s3v2,
+  bucket: bucketName,
+  key: function (req, file, cb) {
+      cb(null, file.originalname);
+      }
     })
-	});
+    });
 
 //////////////////////////////////////////////////////////
 // Add S3 ListBucket code
