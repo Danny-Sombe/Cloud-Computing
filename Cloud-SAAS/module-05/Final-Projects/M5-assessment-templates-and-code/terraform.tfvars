@@ -1,5 +1,5 @@
 # Use the AMI of the custom Ec2 image you previously created
-imageid                = "ami-051e62c2b2b0f9f33"
+imageid                = "ami-07d105c3a7d5777fd"
 # Use t2.micro for the AWS Free Tier
 instance-type          = "t2.micro"
 key-name               = "sonnlogix-key"

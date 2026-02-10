@@ -41,23 +41,25 @@ const { v4: uuidv4 } = require("uuid");
 //////////////////////////////////////////////////////////////////////////////
 // Change this to match YOUR default REGION
 //////////////////////////////////////////////////////////////////////////////
-const REGION = "us-east-2"; //e.g. "us-east-1";
+const REGION = "ap-southeast-2"; //e.g. "us-east-1";
 const s3 = new S3Client({ region: REGION });
 ///////////////////////////////////////////////////////////////////////////
 // I hardcoded my S3 bucket name, this you need to determine dynamically
 // Using the AWS JavaScript SDK
 ///////////////////////////////////////////////////////////////////////////
 var bucketName = '';
-//listBuckets().then(result =>{bucketName = result;}).catch(err=>{console.error("listBuckets function call failed.")});
-	var upload = multer({
-        storage: multerS3({
-        s3: s3,
-        bucket: bucketName,
-        key: function (req, file, cb) {
-            cb(null, file.originalname);
-            }
-    })
-	});
+// multer-s3 supports a function for `bucket` so we can use the bucket discovered at request time
+var upload = multer({
+  storage: multerS3({
+    s3: s3,
+    bucket: function (req, file, cb) {
+      cb(null, bucket_name);
+    },
+    key: function (req, file, cb) {
+      cb(null, file.originalname);
+    },
+  }),
+});
 
 //////////////////////////////////////////////////////////
 // Add S3 ListBucket code
@@ -70,15 +72,16 @@ const listBuckets = async () => {
 	try {
 		const results = await client.send(command);
 		//console.log("List Buckets Results: ", results.Buckets[0].Name);
-                for ( element of results.Buckets ) {
-                        if ( element.Name.includes("raw") ) {
-                                console.log(element.Name)
-                                bucket_name = element.Name
-                        } }
-                
+                for (const element of results.Buckets) {
+                  if (element.Name.includes("raw")) {
+                    console.log(element.Name);
+                    bucket_name = element.Name;
+                  }
+                }
+
                 const params = {
-			Bucket: bucket_name
-		}
+                  Bucket: bucket_name,
+                };
 		return params;
 	
 } catch (err) {
@@ -94,14 +97,17 @@ const listObjects = async (req,res) => {
 	const client = new S3Client({region: REGION });
 	const command = new ListObjectsCommand(await listBuckets());
 	try {
-		const results = await client.send(command);
-		console.log("List Objects Results: ", results);
-        var url=[];
-        for (let i = 0; i < results.Contents.length; i++) {
-                url.push("https://" + results.Name + ".s3.amazonaws.com/" + results.Contents[i].Key);
-        }        
-		console.log("URL: " , url);
-		return url;
+    const results = await client.send(command);
+    console.log("List Objects Results: ", results);
+    var url = [];
+    if (!results.Contents) {
+      return url;
+    }
+    for (let i = 0; i < results.Contents.length; i++) {
+      url.push("https://" + bucket_name + ".s3.amazonaws.com/" + results.Contents[i].Key);
+    }
+    console.log("URL: ", url);
+    return url;
 	} catch (err) {
 		console.error(err);
 	}
@@ -463,7 +469,7 @@ const sendMessageViaEmail = async (req, res) => {
     Message: s3URL,
     TopicArn: snsTopicArn.Topics[0].TopicArn,
   };
-  const client = new SNSClient({ region: "us-east-2" });
+  const client = new SNSClient({ region: "ap-southeast-2" });
   const command = new PublishCommand(params);
   try {
     const results = await client.send(command);
