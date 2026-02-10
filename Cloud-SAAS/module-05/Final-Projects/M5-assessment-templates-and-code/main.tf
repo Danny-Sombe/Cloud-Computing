@@ -326,8 +326,8 @@ resource "aws_autoscaling_group" "asg" {
   desired_capacity          = var.desired
   max_size                  = var.max
   min_size                  = var.min
-  health_check_grace_period = 300
-  health_check_type         = "EC2"
+  health_check_grace_period = 600
+  health_check_type         = "ELB"
   target_group_arns         = [aws_lb_target_group.alb-lb-tg.arn]
   # place in all AZs
   # Use this if you only have the default subnet per AZ
@@ -411,6 +411,19 @@ resource "aws_lb_target_group" "alb-lb-tg" {
   port        = 80
   protocol    = "HTTP"
   vpc_id      = data.aws_vpc.project.id
+
+  # Configure health checks to properly detect healthy targets
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+    timeout             = 10
+    interval            = 30
+    path                = "/"
+    matcher             = "200-399"
+    port                = "traffic-port"
+    protocol            = "HTTP"
+  }
 }
 
 ##############################################################################
