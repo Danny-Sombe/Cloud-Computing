@@ -22,7 +22,7 @@ sudo -u ubuntu git clone git@github.com:Danny-Sombe/Cloud-Computing.git
 
 # Start the nodejs app where it is located via PM2
 # https://pm2.keymetrics.io/docs/usage/quick-start
-cd /home/ubuntu/Cloud-Computing/Cloud-SAAS/module-05/Final Projects/M5-assessment-templates-and-code
+cd /home/ubuntu/Cloud-Computing/Cloud-SAAS/module-05/Final-Projects/M5-assessment-templates-and-code
 
 echo "Copying ./app.py to /usr/local/bin/..." 
 sudo cp ./app.py /usr/local/bin/
