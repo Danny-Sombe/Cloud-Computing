@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 messagesInQueue = False
 
 # https://stackoverflow.com/questions/40377662/boto3-client-noregionerror-you-must-specify-a-region-error-only-sometimes
-region = 'ap-southeast-2'
+region = 'us-east-2'
 
 # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs.html
 clientSQS = boto3.client('sqs',region_name=region)
@@ -233,35 +233,10 @@ if messagesInQueue == True:
     # Graded component
     # Add code to update the RAWS3URL to have the value: done after the image is processed
     #############################################################################
-    print("Connecting to the RDS instances, and updating the RAWS3URL for record: " + str(ID) + "...")
-    cnx = mysql.connector.connect(host=hosturl, user=uname, password=pword, database='company')
-    cursor = cnx.cursor()
 
-    update = ("UPDATE entries SET RAWS3URL = 'done' WHERE ID = " + str(ID) + ";")
-    print(update)
 
-    print("Executing the UPDATE command against the DB...")
-    cursor.execute(update)
-    cnx.commit()
-    
-    cursor.close()
-    cnx.close()
 
     #############################################################################
     # Extra challenge, not graded...
     # Could you add code to unsubscribe your email from the Topic once you received the image?
     #############################################################################
-    print("Listing subscriptions for the SNS Topic...")
-    responseSubscriptions = clientSNS.list_subscriptions_by_topic(
-        TopicArn=responseTopics['Topics'][0]['TopicArn']
-    )
-    
-    print("Unsubscribing all email subscriptions from the Topic...")
-    for subscription in responseSubscriptions['Subscriptions']:
-        if subscription['Protocol'] == 'email' or subscription['Protocol'] == 'email-json':
-            print(f"Unsubscribing: {subscription['SubscriptionArn']}")
-            clientSNS.unsubscribe(
-                SubscriptionArn=subscription['SubscriptionArn']
-            )
-    
-    print("All email subscriptions have been removed from the SNS Topic.")
