@@ -631,12 +631,12 @@ resource "aws_secretsmanager_secret_version" "coursera_project_password" {
 # Retrieve secrets value set in secret manager
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/secretsmanager_secret_version
 # https://github.com/hashicorp/terraform-provider-aws/issues/14322
-data "aws_secretsmanager_secret_version" "project_username" {
+data "aws_secretsmanager_secret_version" "coursera_project_username" {
   depends_on = [ aws_secretsmanager_secret_version.coursera_project_username ]
   secret_id = aws_secretsmanager_secret.coursera_project_username.id
 }
 
-data "aws_secretsmanager_secret_version" "project_password" {
+data "aws_secretsmanager_secret_version" "coursera_project_password" {
   depends_on = [ aws_secretsmanager_secret_version.coursera_project_password ]
   secret_id = aws_secretsmanager_secret.coursera_project_password.id
 }
