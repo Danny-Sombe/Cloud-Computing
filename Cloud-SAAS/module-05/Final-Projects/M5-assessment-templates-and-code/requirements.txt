@@ -1,0 +1,33 @@
+# Python Dependencies for Module 05 Assessment Project
+
+# AWS SDK
+boto3>=1.26.0
+botocore>=1.29.0
+
+# Database
+mysql-connector-python>=8.0.33
+PyMySQL>=1.0.2
+
+# Image Processing
+Pillow>=9.5.0
+
+# Logging and Configuration
+python-dotenv>=1.0.0
+
+# HTTP and utilities
+requests>=2.31.0
+urllib3>=2.0.0
+
+# Testing
+pytest>=7.0.0
+pytest-cov>=4.0.0
+moto>=4.1.0  # For AWS service mocking in tests
+
+# Code quality
+black>=23.0.0
+flake8>=6.0.0
+pylint>=2.17.0
+
+# Utilities
+python-dateutil>=2.8.2
+pytz>=2023.3
