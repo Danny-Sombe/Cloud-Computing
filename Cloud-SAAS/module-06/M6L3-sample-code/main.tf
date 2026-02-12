@@ -702,7 +702,7 @@ output "backend-ip" {
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_table
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_tag
 
-resource "aws_dynamodb_table" "coursera_dynamodb_table" {
+resource "aws_dynamodb_table" "coursera-dynamodb-table" {
   name               = var.dynamodb-name
   billing_mode       = "PROVISIONED"
   read_capacity      = 20
@@ -730,9 +730,9 @@ resource "aws_dynamodb_table" "coursera_dynamodb_table" {
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_table_item
 ##############################################################################
 
-resource "aws_dynamodb" "insert_sample_record" {
+resource "aws_dynamodb" "insert-sample-record" {
   depends_on = [aws_dynamodb.coursera-dynamodb-table]
-  table_name = aws_dynamodb_table.coursera_dynamodb_table
+  table_name = aws_dynamodb_table.coursera-dynamodb-table
   hash_key   = aws_dynamodb_table.coursera-dynamodb-table.hash_key
   range_key  = aws_dynamodb_table.coursera-dynamodb-table.range_key
 
