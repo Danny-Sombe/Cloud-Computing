@@ -6,11 +6,14 @@
 # Installing Python Pip and library Dependencies
 ##############################################################################
 sudo apt update -y
-sudo apt install -y python3-dev python3-setuptools python3-pip
-sudo -u ubuntu python3 -m pip install pip --upgrade
-python3 -m pip install pillow
-python3 -m pip install boto3
-python3 -m pip install mysql-connector-python
+sudo apt install -y python3-dev python3-setuptools python3-pip python3-venv npm
+
+# Create virtual environment for Python packages
+sudo python3 -m venv /opt/app-env
+sudo /opt/app-env/bin/pip install --upgrade pip
+sudo /opt/app-env/bin/pip install pillow
+sudo /opt/app-env/bin/pip install boto3
+sudo /opt/app-env/bin/pip install mysql-connector-python
 npm install uuid
 cd /home/ubuntu
 
