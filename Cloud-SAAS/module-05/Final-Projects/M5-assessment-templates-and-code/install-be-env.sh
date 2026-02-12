@@ -18,7 +18,7 @@ cd /home/ubuntu
 ####################################################################
 # Note - change "hajek.git" to be your private repo name (hawk ID) #
 ####################################################################
-sudo -u ubuntu git clone git@github.com:Danny-Sombe/Cloud-Computing.git
+sudo -u ubuntu git clone https://github.com/Danny-Sombe/Cloud-Computing.git
 
 # Start the nodejs app where it is located via PM2
 # https://pm2.keymetrics.io/docs/usage/quick-start
