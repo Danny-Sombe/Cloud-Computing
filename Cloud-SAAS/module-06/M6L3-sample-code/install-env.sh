@@ -44,11 +44,11 @@ sudo -u ubuntu git clone git@github.com:Danny-Sombe/Cloud-Computing.git
 
 # Start the nodejs app where it is located via PM2
 # https://pm2.keymetrics.io/docs/usage/quick-start
-cd /home/ubuntu/Cloud-Computing/Cloud-SAAS/module-06/M6L3
+cd /home/ubuntu/Cloud-Computing/Cloud-SAAS/module-06/M6L3-sample-code
 # Pull latest changes
 #sudo -u ubuntu git pull
 
-sudo cp /home/ubuntu/Cloud-Computing/Cloud-SAAS/module-06/M6L3/default /etc/nginx/sites-available/default
+sudo cp /home/ubuntu/Cloud-Computing/Cloud-SAAS/module-06/M6L3-sample-code/default /etc/nginx/sites-available/default
 sudo systemctl daemon-reload
 sudo systemctl restart nginx
 
