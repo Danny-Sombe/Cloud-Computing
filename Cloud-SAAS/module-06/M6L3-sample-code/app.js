@@ -35,7 +35,14 @@ const {
   GetQueueUrlCommand,
   SendMessageCommand,
   ListQueuesCommand,
-} = require("@aws-sdk/client-sqs")
+} = require("@aws-sdk/client-sqs");
+
+const {
+  ListTableCommand,
+  DynamoDBClient,
+  ScanCommand,
+  PutItemCommand,
+} = require("@aws-sdk/client-dynamodb");
 
 const { v4: uuidv4 } = require("uuid");
 //////////////////////////////////////////////////////////////////////////////
@@ -578,6 +585,10 @@ app.get("/", function (req, res) {
       
       app.get("/ip", function (req, res) {
         res.write(req.ip);
+      });
+
+      app.get("/dynamodb", function (req, res) {
+      (async () => { await queryAndPrintDynamoRecords(req,res); }) ();
       });
 
       app.listen(3000, function () {

@@ -703,44 +703,48 @@ output "backend-ip" {
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_tag
 
 resource "aws_dynamodb_table" "coursera_table" {
-  name           = var.dynamodb-table-name
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "ID"
+  name               = var.dynamodb-table-name
+  billing_mode       = "PROVISIONED"
+  read_capacity      = 20
+  write_capacity     = 20
+  hash_key           = "Email"
+  range_key          = "RecordNumber"
 
   attribute {
-    name = "ID"
-    type = "N"
+    name = "RecordNumber"
+    type = "S"
   }
-
+    attribute {
+    name = "Email"
+    type = "S"
+  }
   tags = {
     Name = var.tag-name
+    Environment = "coursera"
   }
 }
 
-output "dynamodb-table-name" {
-  description = "DynamoDB Table Name"
-  value       = aws_dynamodb_table.coursera_table.name
-}
 
 ##############################################################################
 # Insert a sample record...
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_table_item
 ##############################################################################
 
-resource "aws_dynamodb_table_item" "sample_record" {
+resource "aws_dynamodb" "insert_sample_record" {
+  depends_on = [aws_dynamodb.coursera-dynamodb-table]
   table_name = aws_dynamodb_table.coursera_table.name
   hash_key   = aws_dynamodb_table.coursera_table.hash_key
+  range_key  = aws_dynamodb_table.coursera_table.range_key
 
-  item = <<ITEM
+item = <<ITEM
 {
-  "ID": {"N": "1"},
-  "RecordNumber": {"N": "1000"},
-  "CustomerName": {"S": "Sample Customer"},
-  "Email": {"S": "sample@example.com"},
-  "Phone": {"S": "555-1234"},
-  "Status": {"S": "pending"},
-  "RAWS3URL": {"S": "http://"},
-  "FINISHEDS3URL": {"S": "http://"}
+"Email": {"S": "soutiontech954@gmail.com"}
+"RecordNumber": {"S": "7694764734975394765934754534"}
+"CustomerName": {"S": "Danny Sombe"}
+"Phone": {"S": "675-7218-8957"}
+"Stat": {"N": "0"}
+"RAWS3URL": {"S": ""}
+"FINISHEDS3URL": {"S": ""}
 }
 ITEM
 }
