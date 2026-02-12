@@ -272,6 +272,26 @@ resource "aws_iam_role_policy" "sqs_fullaccess_policy" {
   })
 }
 
+resource "aws_iam_role_policy" "dynamodb_fullaccess_policy" {
+  name = "dynamodb_fullaccess_policy"
+  role = aws_iam_role.role.id
+
+  # Terraform's "jsonencode" function converts a
+  # Terraform expression result to valid JSON syntax.
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "dynamodb:*",
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      },
+    ]
+  })
+}
+
 # creating a private IPv4 subnet per AZ
 # https://stackoverflow.com/questions/63991120/automatically-create-a-subnet-for-each-aws-availability-zone-in-terraform
 # https://stackoverflow.com/questions/26706683/ec2-t2-micro-instance-has-no-public-dns
@@ -682,16 +702,47 @@ output "backend-ip" {
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_table
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_tag
 
+resource "aws_dynamodb_table" "coursera_table" {
+  name           = var.dynamodb-table-name
+  billing_mode   = "PAY_PER_REQUEST"
+  hash_key       = "ID"
 
+  attribute {
+    name = "ID"
+    type = "N"
+  }
 
+  tags = {
+    Name = var.tag-name
+  }
+}
 
-
-
-
+output "dynamodb-table-name" {
+  description = "DynamoDB Table Name"
+  value       = aws_dynamodb_table.coursera_table.name
+}
 
 ##############################################################################
 # Insert a sample record...
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_table_item
 ##############################################################################
+
+resource "aws_dynamodb_table_item" "sample_record" {
+  table_name = aws_dynamodb_table.coursera_table.name
+  hash_key   = aws_dynamodb_table.coursera_table.hash_key
+
+  item = <<ITEM
+{
+  "ID": {"N": "1"},
+  "RecordNumber": {"N": "1000"},
+  "CustomerName": {"S": "Sample Customer"},
+  "Email": {"S": "sample@example.com"},
+  "Phone": {"S": "555-1234"},
+  "Status": {"S": "pending"},
+  "RAWS3URL": {"S": "http://"},
+  "FINISHEDS3URL": {"S": "http://"}
+}
+ITEM
+}
 
 

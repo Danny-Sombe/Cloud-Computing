@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 messagesInQueue = False
 
 # https://stackoverflow.com/questions/40377662/boto3-client-noregionerror-you-must-specify-a-region-error-only-sometimes
-region = 'us-east-2'
+region = 'ap-southeast-2'
 
 # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs.html
 clientSQS = boto3.client('sqs',region_name=region)
@@ -232,10 +232,42 @@ if messagesInQueue == True:
     #############################################################################
     # Add code to update the RAWS3URL to have the value: done after the image is processed
     #############################################################################
+    print("Connecting to the RDS instance and updating RAWS3URL to 'done' for record: " + str(ID) + "...")
+    cnx = mysql.connector.connect(host=hosturl, user=uname, password=pword, database='company')
+    cursor = cnx.cursor()
 
+    update = ("UPDATE entries SET RAWS3URL = 'done' WHERE ID = " + str(ID) + ";")
+    print(update)
 
+    print("Executing the UPDATE command to mark RAWS3URL as 'done'...")
+    cursor.execute(update)
+    cnx.commit()
+    
+    cursor.close()
+    cnx.close()
 
     #############################################################################
     # Extra challenge, not gradeded...
     # Could you add code to unsubscribe your email from the Topic once you received the image?
     #############################################################################
+    # List subscriptions for the topic and unsubscribe the email
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/list_subscriptions_by_topic.html
+    print("Listing subscriptions for the SNS Topic...")
+    responseSubscriptions = clientSNS.list_subscriptions_by_topic(
+        TopicArn=responseTopics['Topics'][0]['TopicArn']
+    )
+    
+    print("Looking for subscription with email: " + Email)
+    for subscription in responseSubscriptions['Subscriptions']:
+        if subscription['Protocol'] == 'email' and subscription['Endpoint'] == Email:
+            subscriptionArn = subscription['SubscriptionArn']
+            print("Found subscription ARN: " + subscriptionArn)
+            
+            # Unsubscribe the email from the topic
+            # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/unsubscribe.html
+            print("Unsubscribing email " + Email + " from the SNS Topic...")
+            responseUnsubscribe = clientSNS.unsubscribe(
+                SubscriptionArn=subscriptionArn
+            )
+            print("Email successfully unsubscribed from the topic!")
+            break
