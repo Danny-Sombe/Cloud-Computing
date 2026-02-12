@@ -32,4 +32,4 @@ variable "dbname" {}
 variable "snapshot_identifier" {}
 variable "sqs-name" {}
 variable "username" {}
-variable "dynamodb-table-name" {}
+variable "dynamodb-name" {}
