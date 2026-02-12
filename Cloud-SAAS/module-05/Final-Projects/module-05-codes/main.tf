@@ -253,48 +253,6 @@ resource "aws_iam_role_policy" "sm_fullaccess_policy" {
   })
 }
 
-# Creating the IAM role for Secrets Manager access
-# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role
-resource "aws_iam_role" "sm_iam_role" {
-  name               = "sm_iam_role"
-  path               = "/"
-  assume_role_policy = data.aws_iam_policy_document.assume_role.json
-
-  tags = {
-    Name = var.tag-name
-  }
-}
-
-# Creating the IAM role for SQS access
-# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role
-resource "aws_iam_role" "was_iam_role" {
-  name               = "was_iam_role"
-  path               = "/"
-  assume_role_policy = data.aws_iam_policy_document.assume_role.json
-
-  tags = {
-    Name = var.tag-name
-  }
-}
-
-# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy
-resource "aws_iam_role_policy" "sqs_fullaccess_policy" {
-  name = "sqs_fullaccess_policy"
-  role = aws_iam_role.was_iam_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "sqs:*",
-        ]
-        Effect   = "Allow"
-        Resource = "*"
-      },
-    ]
-  })
-}
 
 # creating a private IPv4 subnet per AZ
 # https://stackoverflow.com/questions/63991120/automatically-create-a-subnet-for-each-aws-availability-zone-in-terraform
@@ -553,18 +511,6 @@ data "aws_iam_policy_document" "allow_access_from_another_account-finished" {
 
 # Create SQS Queue
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sqs_queue
-resource "aws_sqs_queue" "coursera_queue" {
-  name                      = var.sqs-name
-  delay_seconds             = 90
-  message_retention_seconds = 86400
-  receive_wait_time_seconds = 10
-  # Default is 30 seconds
-  visibility_timeout_seconds = 300
-
-  tags = {
-    Name = var.tag-name
-  }
-}
 
 
 

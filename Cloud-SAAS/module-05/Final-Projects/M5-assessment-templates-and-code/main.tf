@@ -253,6 +253,25 @@ resource "aws_iam_role_policy" "sm_fullaccess_policy" {
   })
 }
 
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy
+resource "aws_iam_role_policy" "sqs_fullaccess_policy" {
+  name = "sqs_fullaccess_policy"
+  role = aws_iam_role.sqs_iam_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "sqs:*",
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      },
+    ]
+  })
+}
+
 # Creating the IAM role for Secrets Manager access
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role
 resource "aws_iam_role" "sm_iam_role" {
@@ -267,33 +286,14 @@ resource "aws_iam_role" "sm_iam_role" {
 
 # Creating the IAM role for SQS access
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role
-resource "aws_iam_role" "was_iam_role" {
-  name               = "was_iam_role"
+resource "aws_iam_role" "sqs_iam_role" {
+  name               = "sqs_iam_role"
   path               = "/"
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
 
   tags = {
     Name = var.tag-name
   }
-}
-
-# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy
-resource "aws_iam_role_policy" "sqs_fullaccess_policy" {
-  name = "sqs_fullaccess_policy"
-  role = aws_iam_role.was_iam_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "sqs:*",
-        ]
-        Effect   = "Allow"
-        Resource = "*"
-      },
-    ]
-  })
 }
 
 # creating a private IPv4 subnet per AZ
