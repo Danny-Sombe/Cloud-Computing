@@ -702,7 +702,7 @@ output "backend-ip" {
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_table
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_tag
 
-resource "aws_dynamodb_table" "coursera-dynamodb-table" { # BUG: resource name uses hyphens, which makes references invalid
+resource "aws_dynamodb_table" "coursera_dynamodb_table" {
   name               = var.dynamodb-name
   billing_mode       = "PROVISIONED"
   read_capacity      = 20
@@ -714,7 +714,7 @@ resource "aws_dynamodb_table" "coursera-dynamodb-table" { # BUG: resource name u
     name = "RecordNumber"
     type = "S"
   }
-    attribute {
+  attribute {
     name = "Email"
     type = "S"
   }
@@ -730,21 +730,21 @@ resource "aws_dynamodb_table" "coursera-dynamodb-table" { # BUG: resource name u
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_table_item
 ##############################################################################
 
-resource "aws_dynamodb" "insert-sample-record" { # BUG: invalid resource type, should be aws_dynamodb_table_item
-  depends_on = [aws_dynamodb.coursera-dynamodb-table] # BUG: aws_dynamodb is not a valid resource type
-  table_name = aws_dynamodb_table.coursera-dynamodb-table # BUG: invalid reference (hyphens) and should use .name
-  hash_key   = aws_dynamodb_table.coursera-dynamodb-table.hash_key # BUG: invalid reference (hyphens)
-  range_key  = aws_dynamodb_table.coursera-dynamodb-table.range_key # BUG: invalid reference (hyphens)
+resource "aws_dynamodb_table_item" "insert_sample_record" {
+  depends_on = [aws_dynamodb_table.coursera_dynamodb_table]
+  table_name = aws_dynamodb_table.coursera_dynamodb_table.name
+  hash_key   = aws_dynamodb_table.coursera_dynamodb_table.hash_key
+  range_key  = aws_dynamodb_table.coursera_dynamodb_table.range_key
 
-item = <<ITEM
+  item = <<ITEM
 {
-"Email": {"S": "soutiontech954@gmail.com"} # BUG: missing comma between JSON fields
-"RecordNumber": {"S": "7694764734975394765934754534"} # BUG: missing comma between JSON fields
-"CustomerName": {"S": "Danny Sombe"} # BUG: missing comma between JSON fields
-"Phone": {"S": "675-7218-8957"} # BUG: missing comma between JSON fields
-"Stat": {"N": "0"} # BUG: missing comma between JSON fields
-"RAWS3URL": {"S": ""} # BUG: missing comma between JSON fields
-"FINISHEDS3URL": {"S": ""}
+  "Email": {"S": "soutiontech954@gmail.com"},
+  "RecordNumber": {"S": "7694764734975394765934754534"},
+  "CustomerName": {"S": "Danny Sombe"},
+  "Phone": {"S": "675-7218-8957"},
+  "Stat": {"N": "0"},
+  "RAWS3URL": {"S": ""},
+  "FINISHEDS3URL": {"S": ""}
 }
 ITEM
 }
