@@ -11,7 +11,7 @@ sudo -u ubuntu python3 -m pip install pip --upgrade
 python3 -m pip install pillow
 python3 -m pip install boto3
 python3 -m pip install mysql-connector-python
-
+npm install uuid
 cd /home/ubuntu
 
 # Command to clone your private repo via SSH usign the Private key
