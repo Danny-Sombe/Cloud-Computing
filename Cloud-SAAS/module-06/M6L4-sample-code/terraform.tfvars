@@ -17,8 +17,7 @@ number-of-azs          = 3
 region                 = "ap-southeast-2"
 raw-s3-bucket          = "sonnlogix-raw-s3-bucket"
 finished-s3-bucket     = "sonnlogix-finished-s3-bucket"
-dbname                 = "company"
-snapshot_identifier    = "sonnlogix-snapshot"
-sqs-name               = "sonnlogix-sqs"
-username               = "controller"
 dynamodb-name          = "sonnlogix-dynamodb-table"
+sqs-name               = "sonnlogix-sqs"
+
+
