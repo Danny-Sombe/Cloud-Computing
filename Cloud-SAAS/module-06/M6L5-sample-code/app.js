@@ -33,20 +33,19 @@ const {
   PutItemCommand 
 } = require("@aws-sdk/client-dynamodb");
 
-// https://www.npmjs.com/package/uuid
-const { v4: uuidv4 } = require('uuid');
+const { v4: uuidv4 } = require("uuid");
 //////////////////////////////////////////////////////////////////////////////
 // Change this to match YOUR default REGION
 //////////////////////////////////////////////////////////////////////////////
-const REGION = "us-east-2"; //e.g. "us-east-1";
+const REGION = "ap-southeast-2"; //e.g. "us-east-1";
 const s3 = new S3Client({ region: REGION });
 ///////////////////////////////////////////////////////////////////////////
 // I hardcoded my S3 bucket name, this you need to determine dynamically
 // Using the AWS JavaScript SDK
 ///////////////////////////////////////////////////////////////////////////
-var bucketName = 'jrh-raw-bucket';
+var bucketName = 'sonnlogix-raw-s3-bucket';
 //listBuckets().then(result =>{bucketName = result;}).catch(err=>{console.error("listBuckets function call failed.")});
-	var upload = multer({
+  var upload = multer({
         storage: multerS3({
         s3: s3,
         bucket: bucketName,
@@ -54,7 +53,7 @@ var bucketName = 'jrh-raw-bucket';
             cb(null, file.originalname);
             }
     })
-	});
+  });
 
 //////////////////////////////////////////////////////////
 // Add S3 ListBucket code
@@ -62,11 +61,11 @@ var bucketName = 'jrh-raw-bucket';
 var bucket_name = "";
 const listBuckets = async () => {
 
-	const client = new S3Client({region: REGION });
+  const client = new S3Client({region: REGION });
         const command = new ListBucketsCommand({});
-	try {
-		const results = await client.send(command);
-		//console.log("List Buckets Results: ", results.Buckets[0].Name);
+  try {
+    const results = await client.send(command);
+    //console.log("List Buckets Results: ", results.Buckets[0].Name);
                 for ( element of results.Buckets ) {
                         if ( element.Name.includes("raw") ) {
                                 console.log(element.Name)
@@ -74,12 +73,12 @@ const listBuckets = async () => {
                         } }
                 
                 const params = {
-			Bucket: bucket_name
-		}
-		return params;
-	
+      Bucket: bucket_name
+    }
+    return params;
+  
 } catch (err) {
-	console.error(err);
+  console.error(err);
 }
 };
 
@@ -88,20 +87,20 @@ const listBuckets = async () => {
 // https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-s3/interfaces/listobjectscommandoutput.html
 // 
 const listObjects = async (req,res) => {
-	const client = new S3Client({region: REGION });
-	const command = new ListObjectsCommand(await listBuckets());
-	try {
-		const results = await client.send(command);
-		console.log("List Objects Results: ", results);
+  const client = new S3Client({region: REGION });
+  const command = new ListObjectsCommand(await listBuckets());
+  try {
+    const results = await client.send(command);
+    console.log("List Objects Results: ", results);
         var url=[];
         for (let i = 0; i < results.Contents.length; i++) {
                 url.push("https://" + results.Name + ".s3.amazonaws.com/" + results.Contents[i].Key);
         }        
-		console.log("URL: " , url);
-		return url;
-	} catch (err) {
-		console.error(err);
-	}
+    console.log("URL: " , url);
+    return url;
+  } catch (err) {
+    console.error(err);
+  }
 };
 
 
@@ -109,8 +108,8 @@ const listObjects = async (req,res) => {
 /// Get posted data as an async function
 //
 const getPostedData = async (req,res) => {
-	try {
-	let s3URLs = await listObjects(req,res);
+  try {
+  let s3URLs = await listObjects(req,res);
         const fname = req.files[0].originalname;
         var s3URL = "URL not generated due to technical issue.";
         for (let i = 0; i < s3URLs.length; i++) {
@@ -119,21 +118,21 @@ const getPostedData = async (req,res) => {
           break
         }
     }
-	res.write('Successfully uploaded ' + req.files.length + ' files!')
+  res.write('Successfully uploaded ' + req.files.length + ' files!')
 
-	// Use this code to retrieve the value entered in the username field in the index.html
-	var username = req.body['name'];
-	// Use this code to retrieve the value entered in the email field in the index.html
-	var email = req.body['email'];
-	// Use this code to retrieve the value entered in the phone field in the index.html
-	var phone = req.body['phone'];
+  // Use this code to retrieve the value entered in the username field in the index.html
+  var username = req.body['name'];
+  // Use this code to retrieve the value entered in the email field in the index.html
+  var email = req.body['email'];
+  // Use this code to retrieve the value entered in the phone field in the index.html
+  var phone = req.body['phone'];
         res.write(username + "\n");
-	    res.write(s3URL + "\n");
+      res.write(s3URL + "\n");
         res.write(email + "\n");
         res.write(phone + "\n");
 
         res.end();
-	} catch (err) {
+  } catch (err) {
                 console.error(err);
         }
 }; 
@@ -142,8 +141,8 @@ const getPostedData = async (req,res) => {
 // Get images for Image Gallery
 //
 const getImagesFromS3Bucket = async (req,res) => {
-	try {
-	        let imageURL = await listObjects(req,res);
+  try {
+          let imageURL = await listObjects(req,res);
                 console.log("ImageURL:",imageURL);
                 res.set('Content-Type', 'text/html');	
                 res.write("<div>Welcome to the gallery" + "</div>");
@@ -151,7 +150,7 @@ const getImagesFromS3Bucket = async (req,res) => {
                     res.write('<div><img src="' + imageURL[i] + '" /></div>'); 
                   }
                 res.end(); 
-	} catch (err) {
+  } catch (err) {
                 console.error(err);
         }
 };
@@ -172,212 +171,6 @@ const getDBIdentifier = async () => {
         }
       };
       
-      ////////////////////////////////////////////////
-      // Select Record
-      //
-      const selectRecord = async () => {
-        let dbIdentifier = await getDBIdentifier();
-        let uname = await getUname();
-        let pword = await getPword();
-        // let obj = JSON.parse(sec.SecretString);
-        try {
-          
-          // create the connection to database
-          const connection = await mysql.createConnection({
-            host: dbIdentifier.DBInstances[0].Endpoint.Address,
-            user: uname.SecretString,
-            password: pword.SecretString,
-            database: "company",
-          });
-      
-          // simple query
-          const [rows, fields] = await connection.execute("SELECT * FROM `entries`");
-          return rows;
-        } catch (err) {
-          console.error(err);
-        }
-      };
-      
-      const row = (html) => `<tr>\n${html}</tr>\n`,
-        heading = (object) =>
-          row(
-            Object.keys(object).reduce(
-              (html, heading) => html + `<th>${heading}</th>`,
-              ""
-            )
-          ),
-        datarow = (object) =>
-          row(
-            Object.values(object).reduce(
-              (html, value) => html + `<td>${value}</td>`,
-              ""
-            )
-          );
-      
-      function htmlTable(dataList) {
-        return `<table>
-                        ${heading(dataList[0])}
-                        ${dataList.reduce(
-                          (html, object) => html + datarow(object),
-                          ""
-                        )}
-                      </table>`;
-      }
-       ////////////////////////////////////////////////
-      // Select most recent inserted Record ID
-      // https://dev.mysql.com/doc/refman/8.4/en/information-functions.html#function_last-insert-id
-      //
-      const retrieveLastDBRecord = async (req, res) => {
-        let dbIdentifier = await getDBIdentifier();
-        let uname = await getUname();
-        let pword = await getPword();
-        try {
-          const mysql = require("mysql2/promise");
-          // create the connection to database
-          const connection = await mysql.createConnection({
-            host: dbIdentifier.DBInstances[0].Endpoint.Address,
-            user: uname.SecretString,
-            password: pword.SecretString,
-            database: "company",
-          });
-      
-          // simple query       
-          //const [rows, fields] = await connection.execute("SELECT LAST_INSERT_ID() AS LASTID from `entries` ");
-          const [rows, fields] = await connection.execute("SELECT MAX( ID ) AS ID FROM `entries` ");
-          let id = rows[0].ID;
-          console.log("SQL results for rows[0].ID: " + id)
-          return id;
-        } catch (err) {
-          console.error(err);
-        }
-      };
-      
-      ////////////////////////////////////////////////
-      // Select and Print Record
-      //
-      const selectAndPrintRecord = async (req, res) => {
-        let dbIdentifier = await getDBIdentifier();
-        let uname = await getUname();
-        let pword = await getPword();
-        try {
-          const mysql = require("mysql2/promise");
-          // create the connection to database
-          const connection = await mysql.createConnection({
-            host: dbIdentifier.DBInstances[0].Endpoint.Address,
-            user: uname.SecretString,
-            password: pword.SecretString,
-            database: "company",
-          });
-      
-          // simple query
-          const [rows, fields] = await connection.execute("SELECT * FROM `entries`");
-          res.set("Content-Type", "text/html");
-          res.write("Here are the records: " + "\n");
-          res.write(htmlTable(rows));
-          res.end();
-          return rows;
-        } catch (err) {
-          console.error(err);
-        }
-      };
-      
-      ////////////////////////////////////////////////
-      // Select and Print Record
-      //
-      const insertRecord = async (req, res) => {
-        let dbIdentifier = await getDBIdentifier();
-        let uname = await getUname();
-        let pword = await getPword();
-        try {
-          // console.error("dbIdentifier:", dbIdentifier.DBInstances[0].Endpoint.Address);
-          const mysql = require("mysql2/promise");
-          // create the connection to database
-          const connection = await mysql.createConnection({
-            host: dbIdentifier.DBInstances[0].Endpoint.Address,
-            user: uname.SecretString,
-            password: pword.SecretString,
-            database: "company",
-          });
-      
-          // simple query
-          let email = req.body["email"];
-          let id = uuidv4();
-          let username = req.body["name"];
-          let phone = req.body["phone"];
-          let s3URLs = await listObjects(req, res);
-          const fname = req.files[0].originalname;
-          var s3URL = "URL not generated due to technical issue.";
-          for (let i = 0; i < s3URLs.length; i++) {
-            if (s3URLs[i].includes(fname)) {
-              s3URL = s3URLs[i];
-              break;
-            }
-          }
-          let statement =
-            'INSERT INTO entries(RecordNumber,CustomerName,Email,Phone,Stat,RAWS3URL) VALUES("' +
-            id +
-            '","' +
-            username +
-            '","' +
-            email +
-            '","' +
-            phone +
-            '",1,"' +
-            s3URL +
-            '");';
-          const [rows, fields] = await connection.execute(statement);
-          //    console.error(rows);
-          return rows;
-        } catch (err) {
-          console.error(err);
-        }
-      };
-
-//////////////////////////////////
-// https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/secrets-manager/command/GetSecretValueCommand/
-// Directly retrieve the secret value
-// GetSecretValueCommand
-//
-
-const getUname = async () => {
-  
-  //console.log("Secret ARN: ",secretARN.SecretList[0].ARN);
-  const params = {
-    SecretId: "uname",
-  };
-  const client = new SecretsManagerClient({ region: REGION });
-  const command = new GetSecretValueCommand(params);
-  try {
-    const results = await client.send(command);
-    //console.log(results);
-    return results;
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-//////////////////////////////////
-// https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/secrets-manager/command/GetSecretValueCommand/
-// Directly retrieve the secret value
-// GetSecretValueCommand
-//
-
-const getPword = async () => {
-  
-  //console.log("Secret ARN: ",secretARN.SecretList[0].ARN);
-  const params = {
-    SecretId: "pword",
-  };
-  const client = new SecretsManagerClient({ region: REGION });
-  const command = new GetSecretValueCommand(params);
-  try {
-    const results = await client.send(command);
-    //console.log(results);
-    return results;
-  } catch (err) {
-    console.error(err);
-  }
-};
 
 /////////////////////////////////////////////////
 // add list SNS topics here
@@ -420,11 +213,11 @@ const getSnsTopicArn = async () => {
 ///////////////////////////////////////////////////
 // Register email with Topic
 //
-const subscribeEmailToSNSTopic = async () => {
+const subscribeEmailToSNSTopic = async (req, res) => {
   let topicArn = await getListOfSnsTopics();
   const params = {
     // CHANGE ENDPOINT EMAIL TO YOUR OWN
-    Endpoint: "hajek@iit.edu",
+    Endpoint: req.body['email'],
     Protocol: "email",
     TopicArn: topicArn.Topics[0].TopicArn,
   };
@@ -460,7 +253,7 @@ const sendMessageViaEmail = async (req, res) => {
     Message: s3URL,
     TopicArn: snsTopicArn.Topics[0].TopicArn,
   };
-  const client = new SNSClient({ region: "us-east-2" });
+  const client = new SNSClient({ region: "ap-southeast-2" });
   const command = new PublishCommand(params);
   try {
     const results = await client.send(command);
@@ -508,21 +301,17 @@ return response;
 }
 
 };
-////////////////////////////////////////////////////////////////////////////////
-// DynamoDB retrieve last inserted record
-// https://dynobase.dev/code-examples/dynamodb-get-last-inserted-item/
-//
+
 const retrieveLastDynamoRecordID = async () => {
-  const table = await getDynamoTable();
-  const client = new DynamoDBClient({region: REGION});
+  const table= await getDynamoTable();
+  const client = new DynamoClient({region: REGION});
 
   const command = new ScanCommand({
-    TableName: table.TableNames[0],
+    TableName: tablee.TableNames[0],
     ScanIndexForward: false,
-    Limit: 1
   });
 
-  const response = await client.send(command);
+  const respond = await client.send(command);
   console.log(String(response.Items[0].RecordNumber));
   return(String(response.Items[0].RecordNumber))
 }
@@ -564,83 +353,74 @@ const queryAndPrintDynamoRecords = async (req,res) => {
   res.end();
   //return response;
 };
-////////////////////////////////////////////////////////////////////////////////
-// DynamoDB put item
-// https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/dynamodb/command/PutItemCommand/
-//
-const putDynamoItem = async (req,res) => {
+
+const putDynamodb = async (req, res) => {
   console.log("About to put item into DynamoDB...")
-  /*
-  ID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  RecordNumber VARCHAR(64), -- This is the UUID
-  CustomerName VARCHAR(64),
-  Email VARCHAR(64),
-  Phone VARCHAR(64),
-  Stat INT(1) DEFAULT 0, -- Job status, not done is 0, done is 1
-  RAWS3URL VARCHAR(200), -- set the returned S3URL here
-  FINSIHEDS3URL VARCHAR(200)
-  */
-  // Will go and query the URL of the just posted image to S3 Raw Bucket
-    try {
-    let s3URLs = await listObjects(req,res);
-          const fname = req.files[0].originalname;
-          var s3URL = "URL not generated due to technical issue.";
-          console.log("Finding S3URLs...")
-          for (let i = 0; i < s3URLs.length; i++) {
-            if(s3URLs[i].includes(fname)){
-                s3URL = s3URLs[i];
-            break
-          }
-      } 
+
+try {
+  let s3URL = await listObjects(req,res);
+  const fname =req.file[0].original.name;
+  console.log("Finding S3URL...")
+   for (let i = 0; i < s3URL.length; i++) {
+    if(s3URLs[i].includes(fname)){
+      s3URL = s3URL[i];
+      break
     }
-      catch (err) {
-        s3URL = "";
-        console.error(err);
-    }
-    console.log("Listing S3 urls and UUID...")
-  // generate a UUID for RecordNumber
-  // https://www.npmjs.com/package/uuidv4
-    const RecordNumber = uuidv4();
-    console.log(RecordNumber);
-    const table = await getDynamoTable();
-    console.log(table);
-    const client = new DynamoDBClient({region: REGION});
-    const input = {
-      TableName: table.TableNames[0],
-      Item: {
-        "Email": {
-          "S": String(req.body['email'])
-        },
-        "RecordNumber": {
-          "S": String(RecordNumber)
-        },
-        "CustomerName": {
-          "S": String(req.body['name'])
-        },
-        "Phone": {
-          "S": String(req.body['phone'])
-        },
-        "Stat": {
-          "N": "0"
-        },
-        "RAWS3URL": {
-          "S": String(s3URL)
-        },
-        "FINSIHEDS3URL": {
-          "S": ""
-        }
-      },
-      //"ReturnConsumedCapacity": "TOTAL",
+
+ }
+}
+catch (err) {
+  s3UL = "";
+  console.error(err);
+}
+console.log("Listing S3 urls and UUID...")
+const RecordNumber = uuidv4();
+console.log(RecordNumber);
+const table = await getDynamoTable();
+console.log(Table);
+const client = new DynamoDBClient({region: REGION});
+const input = {
+  TableName: table.TableNames[0],
+  Item: {
+    "Email": {
+      "S": String(req.body['email'])
+    },
+
+    "RecordNumber": {
+      "S": String(RecordNumber)
+    },
       
-    }
-    console.log("About to insert item...")
-    
-    const command = new PutItemCommand(input);
-    const response = await client.send(command);
-  
-  console.log("Finished inserting item...")
-  
-  };
+    "CustomerName": {
+      "S": String(req.body['name'])
+    },
+
+    "Phone": {
+      "S": String(req.body['phone'])
+    },
+
+    "Stat": {
+      "N": "0"
+    },
+
+    "RAWS3URL": {
+      "S": ""
+    },
+
+    "FINISHEDS3URL": {
+      "S": ""
+  }
+},
+}
+
+console.log("About to insert item...")
+
+const command = new PutItemCommand(input);
+const response = await client.send(command);
+
+console.log("Finished inserting item...");
+
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // Request to index.html or / express will match this route and render this page
 //
@@ -653,17 +433,12 @@ app.get("/", function (req, res) {
         (async () => { await getImagesFromS3Bucket(req, res);})();
       });
       
-      app.get("/db", function (req, res) {
-        (async () => { await getDBIdentifier(); })();
-        (async () => { await selectAndPrintRecord(req, res); })();
-      });
-      
       app.post("/upload", upload.array("uploadFile", 1), function (req, res, next) {
         (async () => { await getPostedData(req, res);})();
         (async () => { await getListOfSnsTopics(); })();
         (async () => { await getSnsTopicArn() })();
-        (async () => { await subscribeEmailToSNSTopic() } ) ();
-        (async () => { await insertRecord(req, res);})();
+        (async () => { await subscribeEmailToSNSTopic(req, res) } ) ();
+        (async () => { await putDynamoItem(req, res);})();
         (async () => { await sendMessageToQueue(req,res); }) ();
       });
       

@@ -15,7 +15,7 @@ variable "imageid" {}
 variable "instance-type" {}
 variable "key-name" {}
 variable "vpc_security_group_ids" {}
-variable "az" { default = ["us-east-2a", "us-east-2b", "us-east-2c"] }
+variable "az" { default = ["ap-southeast-2a", "ap-southeast-2b", "ap-southeast-2c"] }
 variable "tag-name" {}
 variable "user-sns-topic" {}
 variable "elb-name" {}
@@ -28,8 +28,5 @@ variable "number-of-azs" {}
 variable "region" {}
 variable "raw-s3-bucket" {}
 variable "finished-s3-bucket" {}
-variable "dbname" {}
-variable "snapshot_identifier" {}
 variable "sqs-name" {}
-variable "username" {}
 variable "dynamodb-name" {}

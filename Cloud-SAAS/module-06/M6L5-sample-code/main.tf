@@ -212,26 +212,6 @@ resource "aws_iam_role_policy" "sns_fullaccess_policy" {
   })
 }
 
-resource "aws_iam_role_policy" "sqs_fullaccess_policy" {
-  name = "sqs_fullaccess_policy"
-  role = aws_iam_role.role.id
-
-  # Terraform's "jsonencode" function converts a
-  # Terraform expression result to valid JSON syntax.
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "sqs:*",
-        ]
-        Effect   = "Allow"
-        Resource = "*"
-      },
-    ]
-  })
-}
-
 resource "aws_iam_role_policy" "dynamodb_fullaccess_policy" {
   name = "dynamodb_fullaccess_policy"
   role = aws_iam_role.role.id
@@ -244,6 +224,26 @@ resource "aws_iam_role_policy" "dynamodb_fullaccess_policy" {
       {
         Action = [
           "dynamodb:*",
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "sqs_fullaccess_policy" {
+  name = "sqs_fullaccess_policy"
+  role = aws_iam_role.role.id
+
+  # Terraform's "jsonencode" function converts a
+  # Terraform expression result to valid JSON syntax.
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "sqs:*",
         ]
         Effect   = "Allow"
         Resource = "*"
@@ -532,6 +532,7 @@ resource "aws_sns_topic" "user_updates" {
   }
 }
 
+
 # Create the Backend infrastrucutre
 # Create an EC2 instance to execute the SQL commands on
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/instance
@@ -590,21 +591,21 @@ resource "aws_dynamodb_table" "coursera-dynamodb-table" {
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_table_item
 ##############################################################################
 
-resource "aws_dynamodb" "insert-sample-record" {
-  depends_on = [ aws_dyanmodb.coursera-dynamodb-table ]
-  table_name = aws_dynamodb_table.coursera-dynamodb-table
+resource "aws_dynamodb_table_item" "insert-sample-record" {
+  depends_on = [ aws_dynamodb_table.coursera-dynamodb-table ]
+  table_name = aws_dynamodb_table.coursera-dynamodb-table.name
   hash_key = aws_dynamodb_table.coursera-dynamodb-table.hash_key
   range_key = aws_dynamodb_table.coursera-dynamodb-table.range_key
 
   item = <<ITEM
   {
-  "Email": {"S": "hajek@iit.edu"},
-  "RecordNumber": {"S": "9393j0949393492942949243923"},
-  "CustomerName": {"S": "Jeremy Hajek"},
-  "Phone": {"S": "555-1212"},
+  "Email": {"S": "soutiontech954@gmail.com"},
+  "RecordNumber": {"S": "7694764734975394765934754534"},
+  "CustomerName": {"S": "Danny Sombe"},
+  "Phone": {"S": "675-7218-8957"},
   "Stat": {"N": "0"},
   "RAWS3URL": {"S": ""},
-  "FINSIHEDS3URL": {"S": ""}
+  "FINISHEDS3URL": {"S": ""}
   
   }
 ITEM
