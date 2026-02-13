@@ -591,9 +591,9 @@ resource "aws_dynamodb_table" "coursera-dynamodb-table" {
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_table_item
 ##############################################################################
 
-resource "aws_dynamodb" "insert-sample-record" {
-  depends_on = [ aws_dyanmodb.coursera-dynamodb-table ]
-  table_name = aws_dynamodb_table.coursera-dynamodb-table
+resource "aws_dynamodb_table_item" "insert-sample-record" {
+  depends_on = [ aws_dynamodb_table.coursera-dynamodb-table ]
+  table_name = aws_dynamodb_table.coursera-dynamodb-table.name
   hash_key = aws_dynamodb_table.coursera-dynamodb-table.hash_key
   range_key = aws_dynamodb_table.coursera-dynamodb-table.range_key
 
