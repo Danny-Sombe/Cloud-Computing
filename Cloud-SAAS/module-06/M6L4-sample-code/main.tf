@@ -192,27 +192,6 @@ resource "aws_iam_role_policy" "s3_fullaccess_policy" {
 }
 
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy
-resource "aws_iam_role_policy" "rds_fullaccess_policy" {
-  name = "rds_fullaccess_policy"
-  role = aws_iam_role.role.id
-
-  # Terraform's "jsonencode" function converts a
-  # Terraform expression result to valid JSON syntax.
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "rds:*",
-        ]
-        Effect   = "Allow"
-        Resource = "*"
-      },
-    ]
-  })
-}
-
-# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy
 resource "aws_iam_role_policy" "sns_fullaccess_policy" {
   name = "sns_fullaccess_policy"
   role = aws_iam_role.role.id
@@ -233,8 +212,8 @@ resource "aws_iam_role_policy" "sns_fullaccess_policy" {
   })
 }
 
-resource "aws_iam_role_policy" "sm_fullaccess_policy" {
-  name = "sm_fullaccess_policy"
+resource "aws_iam_role_policy" "dynamodb_fullaccess_policy" {
+  name = "dynamodb_fullaccess_policy"
   role = aws_iam_role.role.id
 
   # Terraform's "jsonencode" function converts a
@@ -244,7 +223,7 @@ resource "aws_iam_role_policy" "sm_fullaccess_policy" {
     Statement = [
       {
         Action = [
-          "secretsmanager:*",
+          "dynamodb:*",
         ]
         Effect   = "Allow"
         Resource = "*"
@@ -252,6 +231,7 @@ resource "aws_iam_role_policy" "sm_fullaccess_policy" {
     ]
   })
 }
+
 resource "aws_iam_role_policy" "sqs_fullaccess_policy" {
   name = "sqs_fullaccess_policy"
   role = aws_iam_role.role.id
@@ -552,108 +532,6 @@ resource "aws_sns_topic" "user_updates" {
   }
 }
 
-# Generate random password -- this way its never hardcoded into our variables and inserted directly as a secretcheck 
-# No one will know what it is!
-# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/secretsmanager_random_password
-data "aws_secretsmanager_random_password" "coursera_project" {
-  password_length = 30
-  exclude_numbers = true
-  exclude_punctuation = true
-}
-
-# Create the actual secret (not adding a value yet)
-# Provides a resource to manage AWS Secrets Manager secret metadata. To manage
-# secret rotation, see the aws_secretsmanager_secret_rotation resource. To 
-# manage a secret value, see the aws_secretsmanager_secret_version resource.
-# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret
-resource "aws_secretsmanager_secret" "coursera_project_username" {
-  name = "uname"
-  # https://github.com/hashicorp/terraform-provider-aws/issues/4467
-  # This will automatically delete the secret upon Terraform destroy 
-  recovery_window_in_days = 0
-  tags = {
-    Name = var.tag-name
-  }
-}
-
-resource "aws_secretsmanager_secret" "coursera_project_password" {
-  name = "pword"
-  # https://github.com/hashicorp/terraform-provider-aws/issues/4467
-  # This will automatically delete the secret upon Terraform destroy 
-  recovery_window_in_days = 0
-  tags = {
-    Name = var.tag-name
-  }
-}
-
-# Provides a resource to manage AWS Secrets Manager secret version including its secret value.
-# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version
-# Used to set the value
-resource "aws_secretsmanager_secret_version" "coursera_project_username" {
-  #depends_on = [ aws_secretsmanager_secret_version.project_username ]
-  secret_id     = aws_secretsmanager_secret.coursera_project_username.id
-  secret_string = var.username
-}
-
-resource "aws_secretsmanager_secret_version" "coursera_project_password" {
-  #depends_on = [ aws_secretsmanager_secret_version.project_password ]
-  secret_id     = aws_secretsmanager_secret.coursera_project_password.id
-  secret_string = data.aws_secretsmanager_random_password.coursera_project.random_password
-}
-
-# Retrieve secrets value set in secret manager
-# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/secretsmanager_secret_version
-# https://github.com/hashicorp/terraform-provider-aws/issues/14322
-data "aws_secretsmanager_secret_version" "project_username" {
-  depends_on = [ aws_secretsmanager_secret_version.coursera_project_username ]
-  secret_id = aws_secretsmanager_secret.coursera_project_username.id
-}
-
-data "aws_secretsmanager_secret_version" "project_password" {
-  depends_on = [ aws_secretsmanager_secret_version.coursera_project_password ]
-  secret_id = aws_secretsmanager_secret.coursera_project_password.id
-}
-
-# Create a dbsubnet group to assign our database to our custom created subnets and vpc
-# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_subnet_group
-resource "aws_db_subnet_group" "default" {
-  name       = "coursera-project"
-  subnet_ids = [for subnet in aws_subnet.private : subnet.id]
-
-  tags = {
-    Name = var.tag-name
-  }
-}
-
-# Return the subnetgroup id
-# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/db_subnet_group
-data "aws_db_subnet_group" "database" {
-  depends_on = [ aws_db_subnet_group.default ]
-  name = "coursera-project"
-}
-
-# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/db_snapshot
-# Use the latest production snapshot to create a dev instance.
-resource "aws_db_instance" "default" {
-  instance_class      = "db.t3.micro"
-  #db_name             = var.dbname
-  snapshot_identifier = var.snapshot_identifier
-  skip_final_snapshot  = true
-  username             = data.aws_secretsmanager_secret_version.project_username.secret_string
-  password             = data.aws_secretsmanager_secret_version.project_password.secret_string
-  vpc_security_group_ids = [data.aws_security_group.coursera-project.id]
-  db_subnet_group_name  = data.aws_db_subnet_group.database.id
-}
-
-output "db-address" {
-  description = "Endpoint URL "
-  value = aws_db_instance.default.address
-}
-
-output "db-name" {
-  description = "DB Name "
-  value = aws_db_instance.default.db_name
-}
 
 # Create the Backend infrastrucutre
 # Create an EC2 instance to execute the SQL commands on
@@ -721,13 +599,13 @@ resource "aws_dynamodb" "insert-sample-record" {
 
   item = <<ITEM
   {
-  "Email": {"S": "hajek@iit.edu"},
-  "RecordNumber": {"S": "9393j0949393492942949243923"},
-  "CustomerName": {"S": "Jeremy Hajek"},
-  "Phone": {"S": "555-1212"},
+  "Email": {"S": "soutiontech954@gmail.com"},
+  "RecordNumber": {"S": "7694764734975394765934754534"},
+  "CustomerName": {"S": "Danny Sombe"},
+  "Phone": {"S": "675-7218-8957"},
   "Stat": {"N": "0"},
   "RAWS3URL": {"S": ""},
-  "FINSIHEDS3URL": {"S": ""}
+  "FINISHEDS3URL": {"S": ""}
   
   }
 ITEM

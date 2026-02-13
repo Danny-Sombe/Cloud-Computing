@@ -12,23 +12,12 @@ const {
 } = require('@aws-sdk/client-s3');
 
 const {
-  SecretsManagerClient,
-  ListSecretsCommand,
-  GetSecretValueCommand,
-} = require("@aws-sdk/client-secrets-manager"); // CommonJS import
-
-const {
   SNSClient,
   ListTopicsCommand,
   GetTopicAttributesCommand,
   SubscribeCommand,
   PublishCommand,
 } = require("@aws-sdk/client-sns");
-
-const {
-  RDSClient,
-  DescribeDBInstancesCommand,
-} = require("@aws-sdk/client-rds");
 
 const {
   SQSClient,
@@ -48,7 +37,7 @@ const { v4: uuidv4 } = require("uuid");
 //////////////////////////////////////////////////////////////////////////////
 // Change this to match YOUR default REGION
 //////////////////////////////////////////////////////////////////////////////
-const REGION = "us-east-2"; //e.g. "us-east-1";
+const REGION = "ap-southeast-2"; //e.g. "us-east-1";
 const s3 = new S3Client({ region: REGION });
 ///////////////////////////////////////////////////////////////////////////
 // I hardcoded my S3 bucket name, this you need to determine dynamically
@@ -191,7 +180,6 @@ const getDBIdentifier = async () => {
         let pword = await getPword();
         // let obj = JSON.parse(sec.SecretString);
         try {
-          const mysql = require("mysql2/promise");
           // create the connection to database
           const connection = await mysql.createConnection({
             host: dbIdentifier.DBInstances[0].Endpoint.Address,

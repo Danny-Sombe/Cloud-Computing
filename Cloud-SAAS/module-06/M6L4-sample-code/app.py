@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 messagesInQueue = False
 
 # https://stackoverflow.com/questions/40377662/boto3-client-noregionerror-you-must-specify-a-region-error-only-sometimes
-region = 'us-east-2'
+region = 'ap-southeast-2'
 
 # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs.html
 clientSQS = boto3.client('sqs',region_name=region)
@@ -209,6 +209,24 @@ if messagesInQueue == True:
     )
     print("Message published to SNS Topic, all who are subscribed will receive it...")
 
+    #############################################################################
+    # Extra challenge: unsubscribe recipient email from SNS topic after message
+    #############################################################################
+    print("Looking for SNS subscription matching email: " + str(Email) + "...")
+    responseSubscriptions = clientSNS.list_subscriptions_by_topic(
+        TopicArn=responseTopics['Topics'][0]['TopicArn']
+    )
+
+    for subscription in responseSubscriptions['Subscriptions']:
+        if subscription.get('Endpoint') == str(Email):
+            subscriptionArn = subscription.get('SubscriptionArn')
+            if subscriptionArn and subscriptionArn != 'PendingConfirmation':
+                print("Unsubscribing email from SNS topic...")
+                clientSNS.unsubscribe(SubscriptionArn=subscriptionArn)
+            else:
+                print("Subscription is pending confirmation; skipping unsubscribe.")
+            break
+
     ############################################################################
     # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs/client/delete_message.html
     print("Now deleting the message off of the queue...")
@@ -232,6 +250,19 @@ if messagesInQueue == True:
     #############################################################################
     # Add code to update the RAWS3URL to have the value: done after the image is processed
     #############################################################################
+    print("Connecting to the RDS instances, and updating the Raw S3 URL for record: " + str(ID) + "...")
+    cnx = mysql.connector.connect(host=hosturl, user=uname, password=pword, database='company')
+    cursor = cnx.cursor()
+
+    update = ("UPDATE entries SET RAWS3URL = 'done' WHERE ID = " + str(ID) + ";")
+    print(update)
+
+    print("Executing the UPDATE command against the DB...")
+    cursor.execute(update)
+    cnx.commit()
+
+    cursor.close()
+    cnx.close()
 
 
 
