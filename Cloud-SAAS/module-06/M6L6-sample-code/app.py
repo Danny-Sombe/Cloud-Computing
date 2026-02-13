@@ -11,37 +11,17 @@ from urllib.parse import urlparse
 messagesInQueue = False
 
 # https://stackoverflow.com/questions/40377662/boto3-client-noregionerror-you-must-specify-a-region-error-only-sometimes
-region = 'us-east-2'
+region = 'ap-southeast-2'
 
 # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs.html
 clientSQS = boto3.client('sqs',region_name=region)
-clientRDS = boto3.client('rds',region_name=region)
-clientSM = boto3.client('secretsmanager',region_name=region)
+clientDynamo = boto3.client('dynamodb',region_name=region)
 clientSNS = boto3.client('sns',region_name=region)
 # https://github.com/boto/boto3/issues/1644
 # Needed to help generate pre-signed URLs
 clientS3 = boto3.client('s3', region_name=region,config=Config(s3={'addressing_style': 'path'}, signature_version='s3v4') )
 
-# https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/secretsmanager/client/get_secret_value.html
-print("Retrieving username SecretString...")
-responseUNAME = clientSM.get_secret_value(
-    SecretId='uname'
-)
-print("Retrieving password SecretString...")
-responsePWORD = clientSM.get_secret_value(
-    SecretId='pword'
-)
-
-# https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/rds/client/describe_db_instances.html
-print("Retrieving RDS instance information...")
-responseRDS = clientRDS.describe_db_instances()
-
-##############################################################################
-# Set database credentials
-##############################################################################
-hosturl = responseRDS['DBInstances'][0]['Endpoint']['Address']
-uname = responseUNAME['SecretString']
-pword = responsePWORD['SecretString']
+responseDynamoTables = clientDynamo.list.tables()
 
 # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs/client/list_queues.html
 print("Getting a list of SQS queues...")
@@ -65,31 +45,14 @@ except:
 if messagesInQueue == True:
     print("Message body content: " + str(responseMessages['Messages'][0]['Body']) + "...")
     print("Proceeding assuming there are messages on the queue...")
-    ##############################################################################
-    # Connect to Mysql database to retrieve SQS queue record
-    # https://dev.mysql.com/doc/connector-python/en/connector-python-example-cursor-select.html
-    ##############################################################################
-    print("Connecting to the RDS instances and retrieving the record with the ID passed via the SQS message...")
-    cnx = mysql.connector.connect(host=hosturl, user=uname, password=pword, database='company')
-    cursor = cnx.cursor()
-
-    query = ("SELECT * FROM entries WHERE ID = %s")
-
-    print("Message Body: " + str(responseMessages['Messages'][0]['Body']))
-    print("Executing the SQL query against the DB to retrieve all field of the record...")
-    cursor.execute(query, [(responseMessages['Messages'][0]['Body'])])
-
-    print("Printing out all the fields in the record...")
-    for (ID, RecordNumber, CustomerName, Email, Phone, Stat, RAWS3URL, FINSIHEDS3URL) in cursor:
-        print("ID: " + str(ID) + " RecordNumber: " + str(RecordNumber) + " CustomerName: " + CustomerName )
-        print("Email: " + Email + " Phone: " + str(Phone) + " Status: " + str(Stat))
-        print("Raw S3 URL: " + str(RAWS3URL) + " Finished URL: " + str(FINSIHEDS3URL))
-
-    cursor.close()
-    cnx.close()
+    ################################################################################
+    responseGetDynamoItem = clientDynamo.get_item(
+       TableName = responseDynamoTables['TableNames'][0],
+       Key={ 'RecordNumber': {'S': responseMessages['Messages'][0]['Body']} }
+       )
     #######################################################################
     # Hack to skip first blank first record
-    if str(RAWS3URL) == "http://":
+    if str(responseGetDynamoItem['Item']['RAwS3URL']['S']) == "http://":
       # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs/client/delete_message.html
       print("Now deleting the initial blank record off of the queue...")
       responseDelMessage = clientSQS.delete_message(
@@ -101,7 +64,7 @@ if messagesInQueue == True:
     # Parse URL retrieved from record to get S3 Object key
     # https://docs.python.org/3/library/urllib.parse.html
     #######################################################################
-    url = urlparse(RAWS3URL)
+    url = urlparse(responseGetDynamoItem['Item']['RAwS3URL']['S'])
     key = url.path.lstrip('/')
     print("S3 Object Key name: " + key)
 
@@ -174,22 +137,7 @@ if messagesInQueue == True:
     
     # Update Finished URL to RDS Entry
        ##############################################################################
-    # Connect to Mysql database Update record with Finished URL
-    # https://dev.mysql.com/doc/connector-python/en/connector-python-example-cursor-select.html
-    ##############################################################################
-    print("Connecting to the RDS instances, and updating the Finished URL for record: " + str(ID) + "...")
-    cnx = mysql.connector.connect(host=hosturl, user=uname, password=pword, database='company')
-    cursor = cnx.cursor()
-
-    update = ("UPDATE entries SET FINSIHEDS3URL = '" + str(responsePresigned) + "' WHERE ID = " + str(ID) + ";")
-    print(update)
-
-    print("Executing the UPDATE command against the DB...")
-    cursor.execute(update)
-    cnx.commit()
-    
-    cursor.close()
-    cnx.close()
+   
     #################################################################################
     # SEND Presigned URL to SNS Topics
     #################################################################################
@@ -208,6 +156,24 @@ if messagesInQueue == True:
     Message=messageToSend,
     )
     print("Message published to SNS Topic, all who are subscribed will receive it...")
+
+    #############################################################################
+    # Extra challenge: unsubscribe recipient email from SNS topic after message
+    #############################################################################
+    print("Looking for SNS subscription matching email: " + str(Email) + "...")
+    responseSubscriptions = clientSNS.list_subscriptions_by_topic(
+        TopicArn=responseTopics['Topics'][0]['TopicArn']
+    )
+
+    for subscription in responseSubscriptions['Subscriptions']:
+        if subscription.get('Endpoint') == str(Email):
+            subscriptionArn = subscription.get('SubscriptionArn')
+            if subscriptionArn and subscriptionArn != 'PendingConfirmation':
+                print("Unsubscribing email from SNS topic...")
+                clientSNS.unsubscribe(SubscriptionArn=subscriptionArn)
+            else:
+                print("Subscription is pending confirmation; skipping unsubscribe.")
+            break
 
     ############################################################################
     # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs/client/delete_message.html
@@ -232,6 +198,19 @@ if messagesInQueue == True:
     #############################################################################
     # Add code to update the RAWS3URL to have the value: done after the image is processed
     #############################################################################
+    print("Connecting to the RDS instances, and updating the Raw S3 URL for record: " + str(ID) + "...")
+    cnx = mysql.connector.connect(host=hosturl, user=uname, password=pword, database='company')
+    cursor = cnx.cursor()
+
+    update = ("UPDATE entries SET RAWS3URL = 'done' WHERE ID = " + str(ID) + ";")
+    print(update)
+
+    print("Executing the UPDATE command against the DB...")
+    cursor.execute(update)
+    cnx.commit()
+
+    cursor.close()
+    cnx.close()
 
 
 

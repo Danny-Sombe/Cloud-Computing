@@ -33,8 +33,9 @@ const {
   PutItemCommand 
 } = require("@aws-sdk/client-dynamodb");
 
-const { v4: uuidv4 } = require("uuid");
+const { v4: uuidv4 } = require('uuid');
 //////////////////////////////////////////////////////////////////////////////
+var ip = require('ip');
 // Change this to match YOUR default REGION
 //////////////////////////////////////////////////////////////////////////////
 const REGION = "ap-southeast-2"; //e.g. "us-east-1";

@@ -41,13 +41,13 @@ var ip = require('ip');
 //////////////////////////////////////////////////////////////////////////////
 // Change this to match YOUR default REGION
 //////////////////////////////////////////////////////////////////////////////
-const REGION = "us-east-2"; //e.g. "us-east-1";
+const REGION = "ap-southeast-2"; //e.g. "us-east-1";
 const s3 = new S3Client({ region: REGION });
 ///////////////////////////////////////////////////////////////////////////
 // I hardcoded my S3 bucket name, this you need to determine dynamically
 // Using the AWS JavaScript SDK
 ///////////////////////////////////////////////////////////////////////////
-var bucketName = 'jrh-raw-bucket';
+var bucketName = 'sonnlogix-raw-s3-bucket';
 //listBuckets().then(result =>{bucketName = result;}).catch(err=>{console.error("listBuckets function call failed.")});
 	var upload = multer({
         storage: multerS3({
@@ -265,34 +265,6 @@ return response;
   console.error(err)
 }
 };
-
-////////////////////////////////////////////////////////////////////////////////
-// DynamoDB retrieve last inserted record
-// Since this is a No-SQL database, this won't work like a Relational Database 
-//
-const retrieveLastDynamoRecordID = async (recNum) => {
-  const table = await getDynamoTable();
-  const client = new DynamoDBClient({region: REGION});
-
-  console.log("About to Query for the item of the RecordNumber just passed: " + recNum)
-  const command = new QueryCommand({
-    TableName: table.TableNames[0],
-    "KeyConditionExpression": "RecordNumber = :rNum",
-    "ExpressionAttributeValues": { ":rNum": { "S": recNum } },
-    // needed to make sure the reads are consistent, the default
-    // is eventually consistent and might miss the latest item inserted
-    ConsistentRead: true 
-  });
-
-  // https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/the-response-object.html
-  // The V2 documents show to use the .S to access the value of the KV pair 
-  // https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/the-response-object.html
-  console.log("About to issue QueryCommand...")
-  const response = await client.send(command);
-  console.log("last record: " + JSON.stringify(response.Items));
-  console.log("last RecordNumber: " + JSON.stringify(response.Items[0].RecordNumber.S));
-  return(String(response.Items[0].RecordNumber.S))
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 // DynamoDB Examples
