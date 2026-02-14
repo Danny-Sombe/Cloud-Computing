@@ -12,7 +12,7 @@ def lambda_handler(event, context):
     # https://stackoverflow.com/questions/40377662/boto3-client-noregionerror-you-must-specify-a-region-error-only-sometimes
     logger.info('## ENVIRONMENT VARIABLES')
     logger.info(os.environ['AWS_LAMBDA_LOG_GROUP_NAME'])
-    region = 'us-east-2'
+    region = 'ap-southeast-2'
     clientS3 = boto3.client('s3', region_name=region,config=Config(s3={'addressing_style': 'path'}, signature_version='s3v4') )
 
     # Create blank text file for S3 to put to the finished bucket
