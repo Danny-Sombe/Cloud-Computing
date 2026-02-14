@@ -540,11 +540,11 @@ resource "aws_dynamodb_table_item" "insert-sample-record" {
 
   item = <<ITEM
 {
-  "Email": {"S": "hajek@iit.edu"},
+  "Email": {"S": "solutiontech954@gmail.com"},
   "datetime": {"N": "1727146443" },
   "RecordNumber": {"S": "9e8091b0-8d53-11ee-95e6-035fc6c6cfb4"},
-  "CustomerName": {"S": "Jeremy Hajek"},
-  "Phone": {"S": "6306389708"},
+  "CustomerName": {"S": "Danny Sombe"},
+  "Phone": {"S": "67572188957"},
   "Stat": {"N": "0"},
   "RAWS3URL": {"S": ""},
   "FINSIHEDS3URL": {"S": ""}
