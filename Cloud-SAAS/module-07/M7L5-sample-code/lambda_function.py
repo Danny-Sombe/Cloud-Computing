@@ -11,185 +11,184 @@ logger = logging.getLogger()
 logger.setLevel("INFO")
 
 def lambda_handler(event, context):
+    # https://stackoverflow.com/questions/40377662/boto3-client-noregionerror-you-must-specify-a-region-error-only-sometimes
+    region = 'ap-southeast-2'
 
-# https://stackoverflow.com/questions/40377662/boto3-client-noregionerror-you-must-specify-a-region-error-only-sometimes
- region = 'ap-southeast-2'
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs.html
+    clientSQS = boto3.client('sqs',region_name=region)
+    clientDynamo = boto3.client('dynamodb',region_name=region)
+    clientSNS = boto3.client('sns',region_name=region)
+    # https://github.com/boto/boto3/issues/1644
+    # Needed to help generate pre-signed URLs
+    clientS3 = boto3.client('s3', region_name=region,config=Config(s3={'addressing_style': 'path'}, signature_version='s3v4') )
 
-# https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs.html
-clientSQS = boto3.client('sqs',region_name=region)
-clientDynamo = boto3.client('dynamodb',region_name=region)
-clientSNS = boto3.client('sns',region_name=region)
-# https://github.com/boto/boto3/issues/1644
-# Needed to help generate pre-signed URLs
-clientS3 = boto3.client('s3', region_name=region,config=Config(s3={'addressing_style': 'path'}, signature_version='s3v4') )
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb.html
+    print("Getting a list of DynamoDB Tables...")
+    responseDynamoTables = clientDynamo.list_tables()
 
-# https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb.html
-print("Getting a list of DynamoDB Tables...")
-responseDynamoTables = clientDynamo.list_tables()
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs/client/list_queues.html
+    print("Getting a list of SQS queues...")
+    responseURL = clientSQS.list_queues()
 
-# https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs/client/list_queues.html
-print("Getting a list of SQS queues...")
-responseURL = clientSQS.list_queues()
-
-# https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs/client/receive_message.html
-print("Retrieving the message on the queue...")
-responseMessages = clientSQS.receive_message(
-    QueueUrl=responseURL['QueueUrls'][0],
-    VisibilityTimeout=180
-)
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs/client/receive_message.html
+    print("Retrieving the message on the queue...")
+    responseMessages = clientSQS.receive_message(
+        QueueUrl=responseURL['QueueUrls'][0],
+        VisibilityTimeout=180
+    )
 
 
-print("Message body content: " + str(responseMessages['Messages'][0]['Body']) + "...")
-print("Proceeding assuming there are messages on the queue...")
+    print("Message body content: " + str(responseMessages['Messages'][0]['Body']) + "...")
+    print("Proceeding assuming there are messages on the queue...")
 
-# Selecting all of the Items data for a particular RecordNumber
-responseGetDynamoItem = clientDynamo.get_item(
-    TableName=responseDynamoTables['TableNames'][0],
-    Key={ 'RecordNumber': { 'S': responseMessages['Messages'][0]['Body'] }},
-    ConsistentRead=True
-        )
+    # Selecting all of the Items data for a particular RecordNumber
+    responseGetDynamoItem = clientDynamo.get_item(
+        TableName=responseDynamoTables['TableNames'][0],
+        Key={ 'RecordNumber': { 'S': responseMessages['Messages'][0]['Body'] }},
+        ConsistentRead=True
+            )
 
-print("Printing out all the fields in the record...")
-print(responseGetDynamoItem['Item'])
+    print("Printing out all the fields in the record...")
+    print(responseGetDynamoItem['Item'])
 
-#######################################################################
+    #######################################################################
 
-#######################################################################
-# Parse URL retrieved from record to get S3 Object key
-# https://docs.python.org/3/library/urllib.parse.html
-#######################################################################
-url = urlparse(responseGetDynamoItem['Item']['RAWS3URL']['S'])
-key = url.path.lstrip('/')
-print("S3 Object Key name: " + key)
+    #######################################################################
+    # Parse URL retrieved from record to get S3 Object key
+    # https://docs.python.org/3/library/urllib.parse.html
+    #######################################################################
+    url = urlparse(responseGetDynamoItem['Item']['RAWS3URL']['S'])
+    key = url.path.lstrip('/')
+    print("S3 Object Key name: " + key)
 
-#######################################################################
-# https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/list_buckets.html
-responseS3 = clientS3.list_buckets()
+    #######################################################################
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/list_buckets.html
+    responseS3 = clientS3.list_buckets()
 
-for n in range(0,len(responseS3['Buckets'])):
-    if "raw" in responseS3['Buckets'][n]['Name']:
-        BUCKET_NAME = responseS3['Buckets'][n]['Name']
+    for n in range(0,len(responseS3['Buckets'])):
+        if "raw" in responseS3['Buckets'][n]['Name']:
+            BUCKET_NAME = responseS3['Buckets'][n]['Name']
 
-# https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/get_object.html
-responseGetObject = clientS3.get_object(
-    Bucket=BUCKET_NAME,
-    Key=key
-)
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/get_object.html
+    responseGetObject = clientS3.get_object(
+        Bucket=BUCKET_NAME,
+        Key=key
+    )
 
-# Saving S3 stream to a local byte stream
-print("Saving S3 byte stream to local byte stream...")
-file_byte_string = responseGetObject['Body'].read()
+    # Saving S3 stream to a local byte stream
+    print("Saving S3 byte stream to local byte stream...")
+    file_byte_string = responseGetObject['Body'].read()
 
-# Convert byte stream to an Image object and pass it to PIL
-print("Converting local byte stream to an image...")
-im = Image.open(BytesIO(file_byte_string))
+    # Convert byte stream to an Image object and pass it to PIL
+    print("Converting local byte stream to an image...")
+    im = Image.open(BytesIO(file_byte_string))
 
-print("Printing Image size meta-data...")
-print(im.format, im.size, im.mode)
+    print("Printing Image size meta-data...")
+    print(im.format, im.size, im.mode)
 
-# https://pythonexamples.org/pillow-convert-image-to-grayscale/
-print("Converting image to grayscale...")
-# Convert the image to grayscale
-im = im.convert("L")
-print("Saving newly created image to disk...")
-# Save the grayscale image
-file_name = "/tmp/grayscale-" + key 
-im.save(file_name)
+    # https://pythonexamples.org/pillow-convert-image-to-grayscale/
+    print("Converting image to grayscale...")
+    # Convert the image to grayscale
+    im = im.convert("L")
+    print("Saving newly created image to disk...")
+    # Save the grayscale image
+    file_name = "/tmp/grayscale-" + key 
+    im.save(file_name)
 
-print("Printing Grayscale Image size meta-data...")
-print(im.format, im.size, im.mode)
+    print("Printing Grayscale Image size meta-data...")
+    print(im.format, im.size, im.mode)
 
-# Uploading Files to S3
-# https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-uploading-files.html
-# Upload the file
-print("Pushing modified image to Finished S3 bucket...")
-for n in range(0,len(responseS3['Buckets'])):
-    if "finished" in responseS3['Buckets'][n]['Name']:
-       FIN_BUCKET_NAME = responseS3['Buckets'][n]['Name']
+    # Uploading Files to S3
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-uploading-files.html
+    # Upload the file
+    print("Pushing modified image to Finished S3 bucket...")
+    for n in range(0,len(responseS3['Buckets'])):
+        if "finished" in responseS3['Buckets'][n]['Name']:
+           FIN_BUCKET_NAME = responseS3['Buckets'][n]['Name']
 
-try:
-    responseS3Put = clientS3.upload_file(file_name, FIN_BUCKET_NAME, key)
-except ClientError as e:
-    logging.error(e)
+    try:
+        responseS3Put = clientS3.upload_file(file_name, FIN_BUCKET_NAME, key)
+    except ClientError as e:
+        logging.error(e)
 
-# Generate Presigned URL
-# https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-presigned-urls.html
-print("Generating presigned S3 URL...")
-try:
-    responsePresigned = clientS3.generate_presigned_url('get_object', Params={'Bucket': FIN_BUCKET_NAME,'Key': key},ExpiresIn=7200)
-except ClientError as e:
-    logging.error(e)
+    # Generate Presigned URL
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-presigned-urls.html
+    print("Generating presigned S3 URL...")
+    try:
+        responsePresigned = clientS3.generate_presigned_url('get_object', Params={'Bucket': FIN_BUCKET_NAME,'Key': key},ExpiresIn=7200)
+    except ClientError as e:
+        logging.error(e)
 
-print(str(responsePresigned))
+    print(str(responsePresigned))
 
-###################################################################
-# Add Dynamo Update code
-# https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/client/update_item.html
-###################################################################
-# add presigned URL code to Item in DynamoDB
-responseDynamoUpdateItem = clientDynamo.update_item(
-ExpressionAttributeNames={
-    '#FU': 'FINISHEDS3URL'
+    ###################################################################
+    # Add Dynamo Update code
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/client/update_item.html
+    ###################################################################
+    # add presigned URL code to Item in DynamoDB
+    responseDynamoUpdateItem = clientDynamo.update_item(
+    ExpressionAttributeNames={
+        '#FU': 'FINISHEDS3URL'
+        },
+
+    ExpressionAttributeValues={
+        ':u': {
+            'S': responsePresigned,
+        }
+
     },
 
-ExpressionAttributeValues={
-    ':u': {
-        'S': responsePresigned,
-    }
-
-},
-
-Key={
-    'RecordNumber': {
-    'S': responseMessages['Messages'][0]['Body'],
-    }
-},
-ReturnValues="ALL_NEW",
-TableName=responseDynamoTables['TableNames'][0],
-UpdateExpression='SET #FU = :p'
-)
+    Key={
+        'RecordNumber': {
+        'S': responseMessages['Messages'][0]['Body'],
+        }
+    },
+    ReturnValues="ALL_NEW",
+    TableName=responseDynamoTables['TableNames'][0],
+    UpdateExpression='SET #FU = :p'
+    )
 
 
-#################################################################################
-# SEND Presigned URL to SNS Topics
-#################################################################################
-# Retrieve the TopicARN
-# https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/list_topics.html
-print("Listing SNS Topic ARNs...")
-responseTopics = clientSNS.list_topics()
-print(responseTopics['Topics'][0]['TopicArn'])
-# Publish Message to the Topic ARN
-# https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/publish.html
-messageToSend = "Your image: " + str(file_name) + " is ready for download at: " + str(responsePresigned)
-print("Message we will be sending: " + str(messageToSend))
-responsePublish = clientSNS.publish(
-TopicArn=responseTopics['Topics'][0]['TopicArn'],
-Subject="Your image is ready for download!",
-Message=messageToSend,
-)
-print("Message published to SNS Topic, all who are subscribed will receive it...")
+    #################################################################################
+    # SEND Presigned URL to SNS Topics
+    #################################################################################
+    # Retrieve the TopicARN
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/list_topics.html
+    print("Listing SNS Topic ARNs...")
+    responseTopics = clientSNS.list_topics()
+    print(responseTopics['Topics'][0]['TopicArn'])
+    # Publish Message to the Topic ARN
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/publish.html
+    messageToSend = "Your image: " + str(file_name) + " is ready for download at: " + str(responsePresigned)
+    print("Message we will be sending: " + str(messageToSend))
+    responsePublish = clientSNS.publish(
+    TopicArn=responseTopics['Topics'][0]['TopicArn'],
+    Subject="Your image is ready for download!",
+    Message=messageToSend,
+    )
+    print("Message published to SNS Topic, all who are subscribed will receive it...")
 
-############################################################################
-# https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs/client/delete_message.html
-print("Now deleting the message off of the queue...")
-responseDelMessage = clientSQS.delete_message(
-    QueueUrl=responseURL['QueueUrls'][0],
-    ReceiptHandle=responseMessages['Messages'][0]['ReceiptHandle']
-)
+    ############################################################################
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs/client/delete_message.html
+    print("Now deleting the message off of the queue...")
+    responseDelMessage = clientSQS.delete_message(
+        QueueUrl=responseURL['QueueUrls'][0],
+        ReceiptHandle=responseMessages['Messages'][0]['ReceiptHandle']
+    )
 
-print(responseDelMessage)
+    print(responseDelMessage)
 
-#############################################################################
-# Delete Object from Raw S3 bucket
-# https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/delete_object.html
-#############################################################################
-print("Now deleting the Image object from the RawS3 bucket...")
-responseDelObject = clientS3.delete_object(
-Bucket=BUCKET_NAME,
-Key=key
-)
+    #############################################################################
+    # Delete Object from Raw S3 bucket
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/delete_object.html
+    #############################################################################
+    print("Now deleting the Image object from the RawS3 bucket...")
+    responseDelObject = clientS3.delete_object(
+    Bucket=BUCKET_NAME,
+    Key=key
+    )
 
     return {
-        "statusCode": 200,
-        "body": json.dumps("Hello from Lambda!")
+            "statusCode": 200,
+            "body": json.dumps("Hello from Lambda!")
     }
