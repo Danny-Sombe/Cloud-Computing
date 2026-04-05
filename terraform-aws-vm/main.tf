@@ -116,7 +116,7 @@ resource "aws_instance" "web_server" {
 
   associate_public_ip_address = true
 
-  key_name = "sonnlogix-key.priv" # IMPORTANT: change this
+  key_name = "demo" # IMPORTANT: change this
 
   tags = {
     Name = "terraform-ec2"
