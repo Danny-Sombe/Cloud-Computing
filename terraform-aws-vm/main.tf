@@ -107,7 +107,7 @@ resource "aws_security_group" "web_sg" {
 # EC2 Instance
 # ----------------------
 resource "aws_instance" "web_server" {
-  ami           = "ami-0df4b2961410d4cff" # Ubuntu 20.04 (Sydney region)
+  ami           = "ami-084fe2982f7b555c8" # Ubuntu 20.04 (Sydney region)
   instance_type = "t2.micro"
 
   subnet_id = aws_subnet.public_subnet.id
