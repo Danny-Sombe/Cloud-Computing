@@ -1,11 +1,11 @@
 # EC2 Creation
 resource "aws_instance" "web" {
-  ami           = "ami-0c55b159cbfafe1f0" # change based on region
+  ami           = "ami-0c33c6bd24cee108b" # change based on region
   instance_type = "t2.micro"
   subnet_id     = aws_subnet.public_subnet.id
 
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
-  key_name               = "your-key-name"
+  key_name               = "sonnlogix-key"
 
   tags = {
     Name = "web-server"
