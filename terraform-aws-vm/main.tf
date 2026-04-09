@@ -31,12 +31,24 @@ resource "aws_subnet" "public_subnet" {
   }
 }
 
+# 2 Private Subnet
 resource "aws_subnet" "private_subnet" {
-  vpc_id     = aws_vpc.main.id
-  cidr_block = "10.0.2.0/24"
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.2.0/24"
+  availability_zone = "ap-southeast-2a"
 
   tags = {
-    Name = "private-subnet"
+    Name = "private-subnet-1"
+  }
+}
+
+resource "aws_subnet" "private_subnet_2" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.3.0/24"
+  availability_zone = "ap-southeast-2b"
+
+  tags = {
+    Name = "private-subnet-2"
   }
 }
 
@@ -98,6 +110,52 @@ resource "aws_security_group" "ec2_sg" {
   }
 }
 
+# RDS Subnet Group
+resource "aws_db_subnet_group" "main" {
+  name = "main-db-subnet-group"
+
+  subnet_ids = [
+    aws_subnet.private_subnet.id,
+    aws_subnet.private_subnet_2.id
+  ]
+
+  tags = {
+    Name = "db-subnet-group"
+  }
+}
+
+# RDS MYSQL Instances
+resource "aws_db_instance" "mysql" {
+  identifier = "my-mysql-db"
+
+  engine         = "mysql"
+  engine_version = "8.0"
+  instance_class = "db.t3.micro"
+
+  allocated_storage = 20
+  storage_type      = "gp2"
+
+  db_name  = "myappdb"
+  username = "admin"
+  password = "StrongPassword123!"  # change this
+
+  db_subnet_group_name   = aws_db_subnet_group.main.name
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
+
+  publicly_accessible = false
+
+  skip_final_snapshot = true
+
+    # ADD IT HERE
+  depends_on = [
+    aws_db_subnet_group.main
+  ]
+
+  tags = {
+    Name = "mysql-db"
+  }
+}
+
 # RDS Security Group
 resource "aws_security_group" "rds_sg" {
   name   = "rds-sg"
@@ -132,4 +190,9 @@ resource "aws_eip" "ec2_eip" {
 resource "aws_eip_association" "eip_assoc" {
   instance_id   = aws_instance.web.id
   allocation_id = aws_eip.ec2_eip.id
+}
+
+# Output RDS Instances SHH
+output "rds_endpoint" {
+  value = aws_db_instance.mysql.endpoint
 }
