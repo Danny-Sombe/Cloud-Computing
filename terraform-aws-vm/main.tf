@@ -137,7 +137,7 @@ resource "aws_db_instance" "mysql" {
 
   db_name  = "myappdb"
   username = "admin"
-  password = "StrongPassword123!"  # change this
+  password = "Massalai0675!"  # change this
 
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
