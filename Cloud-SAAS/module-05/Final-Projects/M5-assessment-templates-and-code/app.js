@@ -4,11 +4,12 @@ const app = express();
 const multer = require("multer");
 const multerS3 = require("multer-s3");
 
-const { 
-  S3Client, 
-  ListBucketsCommand, 
-  ListObjectsCommand, 
-  GetObjectCommand 
+const {
+  S3Client,
+  ListBucketsCommand,
+  ListObjectsCommand,
+  GetObjectCommand,
+  PutObjectCommand
 } = require('@aws-sdk/client-s3');
 
 const {
@@ -47,25 +48,50 @@ const s3 = new S3Client({ region: REGION });
 // I hardcoded my S3 bucket name, this you need to determine dynamically
 // Using the AWS JavaScript SDK
 ///////////////////////////////////////////////////////////////////////////
-var bucketName = '';
-var upload = null;
+var bucketName = "sonnlogix-raw-s3-bucket";
 
-async function initializeUpload() {
-	const bucketParams = await listBuckets();
-	bucketName = bucketParams.Bucket;
-	upload = multer({
-        storage: multerS3({
-        s3: s3,
-        bucket: bucketName,
-        key: function (req, file, cb) {
-            cb(null, file.originalname);
-            }
-    	})
+// Use memory storage instead of multerS3 for better compatibility
+const upload = multer({
+	storage: multer.memoryStorage(),
+	limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
+});
+
+// Manual S3 upload function
+const uploadToS3 = async (file, bucketName) => {
+	const { PutObjectCommand } = require('@aws-sdk/client-s3');
+	const command = new PutObjectCommand({
+		Bucket: bucketName,
+		Key: file.originalname,
+		Body: file.buffer,
+		ContentType: file.mimetype
 	});
+
+	try {
+		const response = await s3.send(command);
+		console.log("File uploaded to S3:", file.originalname);
+		return response;
+	} catch (err) {
+		console.error("S3 upload error:", err);
+		throw err;
+	}
+};
+
+// Initialize bucket name on startup
+async function initializeBucket() {
+	try {
+		const bucketParams = await listBuckets();
+		bucketName = bucketParams.Bucket || "sonnlogix-raw-s3-bucket";
+		console.log("Bucket initialized:", bucketName);
+	} catch (err) {
+		console.error("Error getting bucket name:", err);
+		bucketName = "sonnlogix-raw-s3-bucket";
+		console.log("Using default bucket:", bucketName);
+	}
 }
 
-initializeUpload().catch(err => {
+initializeBucket().catch(err => {
 	console.error("Failed to initialize bucket:", err);
+	bucketName = "sonnlogix-raw-s3-bucket";
 });
 
 //////////////////////////////////////////////////////////
@@ -101,18 +127,23 @@ const listBuckets = async () => {
 // 
 const listObjects = async (req,res) => {
 	const client = new S3Client({region: REGION });
-	const command = new ListObjectsCommand(await listBuckets());
 	try {
+		const command = new ListObjectsCommand({
+			Bucket: bucketName || "sonnlogix-raw-s3-bucket"
+		});
 		const results = await client.send(command);
 		console.log("List Objects Results: ", results);
         var url=[];
-        for (let i = 0; i < results.Contents.length; i++) {
-                url.push("https://" + results.Name + ".s3.amazonaws.com/" + results.Contents[i].Key);
-        }        
+        if (results.Contents) {
+            for (let i = 0; i < results.Contents.length; i++) {
+                    url.push("https://" + (bucketName || "sonnlogix-raw-s3-bucket") + ".s3.amazonaws.com/" + results.Contents[i].Key);
+            }
+        }
 		console.log("URL: " , url);
 		return url;
 	} catch (err) {
-		console.error(err);
+		console.error("ListObjects error:", err);
+		return [];
 	}
 };
 
@@ -552,6 +583,13 @@ app.get("/", function (req, res) {
       
       app.post("/upload", upload.array("uploadFile", 1), async function (req, res, next) {
         try {
+          // Upload file to S3 manually
+          if (req.files && req.files.length > 0) {
+            const file = req.files[0];
+            console.log("Uploading file:", file.originalname, "to bucket:", bucketName);
+            await uploadToS3(file, bucketName);
+          }
+
           await getPostedData(req, res);
           await getListOfSnsTopics();
           await getSnsTopicArn();

@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/opt/app-env/bin/python3 /usr/local/bin/app.py
+ExecStart=/usr/bin/python3 /usr/local/bin/app.py
 #PrivateTmp=true
 
 [Install]
