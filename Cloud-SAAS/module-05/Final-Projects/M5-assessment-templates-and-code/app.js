@@ -302,25 +302,40 @@ const getDBIdentifier = async () => {
         let dbIdentifier = await getDBIdentifier();
         let uname = await getUname();
         let pword = await getPword();
+        let connection;
         try {
           const mysql = require("mysql2/promise");
-          // create the connection to database
-          const connection = await mysql.createConnection({
+          // create the connection to database with timeout
+          connection = await mysql.createConnection({
             host: dbIdentifier.DBInstances[0].Endpoint.Address,
             user: uname.SecretString,
             password: pword.SecretString,
             database: "company",
+            waitForConnections: true,
+            connectionLimit: 1,
+            queueLimit: 0,
+            enableKeepAlive: true
           });
-      
-          // simple query
-          const [rows, fields] = await connection.execute("SELECT * FROM `entries`");
+
+          // simple query with timeout
+          const [rows, fields] = await connection.execute("SELECT * FROM `entries` LIMIT 100");
           res.set("Content-Type", "text/html");
           res.write("Here are the records: " + "\n");
           res.write(htmlTable(rows));
           res.end();
+          await connection.end();
           return rows;
         } catch (err) {
-          console.error(err);
+          console.error("Database error:", err);
+          res.status(500).write("Database error: " + err.message);
+          res.end();
+          if (connection) {
+            try {
+              await connection.end();
+            } catch (e) {
+              console.error("Error closing connection:", e);
+            }
+          }
         }
       };
       
