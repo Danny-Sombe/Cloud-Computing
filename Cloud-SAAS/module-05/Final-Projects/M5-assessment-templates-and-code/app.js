@@ -48,16 +48,25 @@ const s3 = new S3Client({ region: REGION });
 // Using the AWS JavaScript SDK
 ///////////////////////////////////////////////////////////////////////////
 var bucketName = '';
-//listBuckets().then(result =>{bucketName = result;}).catch(err=>{console.error("listBuckets function call failed.")});
-	var upload = multer({
+var upload = null;
+
+async function initializeUpload() {
+	const bucketParams = await listBuckets();
+	bucketName = bucketParams.Bucket;
+	upload = multer({
         storage: multerS3({
         s3: s3,
         bucket: bucketName,
         key: function (req, file, cb) {
             cb(null, file.originalname);
             }
-    })
+    	})
 	});
+}
+
+initializeUpload().catch(err => {
+	console.error("Failed to initialize bucket:", err);
+});
 
 //////////////////////////////////////////////////////////
 // Add S3 ListBucket code
@@ -520,24 +529,40 @@ app.get("/", function (req, res) {
         res.sendFile(__dirname + "/index.html");
       });
       
-      app.get("/gallery", function (req, res) {
-        (async () => { await getImagesFromS3Bucket(req, res);})();
+      app.get("/gallery", async function (req, res) {
+        try {
+          await getImagesFromS3Bucket(req, res);
+        } catch (err) {
+          console.error("Gallery error:", err);
+          res.status(500).write("Error loading gallery: " + err.message);
+          res.end();
+        }
+      });
+
+      app.get("/db", async function (req, res) {
+        try {
+          await getDBIdentifier();
+          await selectAndPrintRecord(req, res);
+        } catch (err) {
+          console.error("DB error:", err);
+          res.status(500).write("Error loading records: " + err.message);
+          res.end();
+        }
       });
       
-      app.get("/db", function (req, res) {
-        (async () => { await getDBIdentifier(); })();
-        (async () => { await selectAndPrintRecord(req, res); })();
-      });
-      
-      app.post("/upload", upload.array("uploadFile", 1), function (req, res, next) {
-        (async () => { await getPostedData(req, res);})();
-        (async () => { await getListOfSnsTopics(); })();
-        (async () => { await getSnsTopicArn() })();
-        (async () => { await subscribeEmailToSNSTopic() } ) ();
-        //(async () => { await sendMessageViaEmail(req,res) } ) ();
-        (async () => { await insertRecord(req, res);})();
-        (async () => { await sendMessageToQueue(req,res); }) ();
-        // add SQS message here, includes DB record UUID,
+      app.post("/upload", upload.array("uploadFile", 1), async function (req, res, next) {
+        try {
+          await getPostedData(req, res);
+          await getListOfSnsTopics();
+          await getSnsTopicArn();
+          await subscribeEmailToSNSTopic();
+          await insertRecord(req, res);
+          await sendMessageToQueue(req, res);
+        } catch (err) {
+          console.error("Upload error:", err);
+          res.status(500).write("Error processing upload: " + err.message);
+          res.end();
+        }
       });
       
       app.get("/ip", function (req, res) {

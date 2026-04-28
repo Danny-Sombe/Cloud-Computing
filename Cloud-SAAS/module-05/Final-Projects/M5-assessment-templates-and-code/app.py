@@ -181,11 +181,9 @@ if messagesInQueue == True:
     cnx = mysql.connector.connect(host=hosturl, user=uname, password=pword, database='company')
     cursor = cnx.cursor()
 
-    update = ("UPDATE entries SET FINSIHEDS3URL = '" + str(responsePresigned) + "' WHERE ID = " + str(ID) + ";")
-    print(update)
-
+    update = "UPDATE entries SET FINSIHEDS3URL = %s WHERE ID = %s"
     print("Executing the UPDATE command against the DB...")
-    cursor.execute(update)
+    cursor.execute(update, (str(responsePresigned), int(ID)))
     cnx.commit()
     
     cursor.close()
@@ -237,11 +235,9 @@ if messagesInQueue == True:
     cnx = mysql.connector.connect(host=hosturl, user=uname, password=pword, database='company')
     cursor = cnx.cursor()
 
-    update = ("UPDATE entries SET RAWS3URL = 'done' WHERE ID = " + str(ID) + ";")
-    print(update)
-
+    update = "UPDATE entries SET RAWS3URL = %s WHERE ID = %s"
     print("Executing the UPDATE command against the DB...")
-    cursor.execute(update)
+    cursor.execute(update, ('done', int(ID)))
     cnx.commit()
     
     cursor.close()
