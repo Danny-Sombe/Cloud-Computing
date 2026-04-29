@@ -588,11 +588,62 @@ app.get("/", function (req, res) {
 
       app.get("/db", async function (req, res) {
         try {
-          await getDBIdentifier();
-          await selectAndPrintRecord(req, res);
+          // Set response headers and initialize
+          res.set("Content-Type", "text/html");
+          res.set("Connection", "close");
+
+          // Get DB info
+          let dbIdentifier = await getDBIdentifier();
+          let uname = await getUname();
+          let pword = await getPword();
+
+          // Try to query database with strict timeout
+          const mysql = require("mysql2/promise");
+          let connection;
+
+          try {
+            // Create connection with shorter timeout
+            connection = await Promise.race([
+              mysql.createConnection({
+                host: dbIdentifier.DBInstances[0].Endpoint.Address,
+                user: uname.SecretString,
+                password: pword.SecretString,
+                database: "company",
+                connectionTimeout: 3000
+              }),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 5000))
+            ]);
+
+            // Execute query with timeout
+            const [rows, fields] = await Promise.race([
+              connection.execute("SELECT * FROM `entries` LIMIT 100"),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Query timeout')), 5000))
+            ]);
+
+            // Build HTML response
+            res.write("Here are the records: <br>");
+            if (rows && rows.length > 0) {
+              res.write(htmlTable(rows));
+            } else {
+              res.write("No records found in database");
+            }
+            res.end();
+
+            // Close connection without waiting
+            connection.end().catch(() => {});
+
+          } catch (dbErr) {
+            console.error("Database query error:", dbErr.message);
+            res.write("Database records: [Unable to retrieve - " + dbErr.message + "]");
+            res.end();
+            if (connection) {
+              connection.end().catch(() => {});
+            }
+          }
         } catch (err) {
-          console.error("DB error:", err);
-          res.status(500).write("Error loading records: " + err.message);
+          console.error("DB endpoint error:", err);
+          res.set("Content-Type", "text/html");
+          res.status(500).write("Error: " + err.message);
           res.end();
         }
       });
