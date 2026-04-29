@@ -299,6 +299,8 @@ const getDBIdentifier = async () => {
       // Select and Print Record
       //
       const selectAndPrintRecord = async (req, res) => {
+        const timeout = (promise, ms) => Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))]);
+
         let dbIdentifier = await getDBIdentifier();
         let uname = await getUname();
         let pword = await getPword();
@@ -306,32 +308,31 @@ const getDBIdentifier = async () => {
         try {
           const mysql = require("mysql2/promise");
           // create the connection to database with timeout
-          connection = await mysql.createConnection({
+          connection = await timeout(mysql.createConnection({
             host: dbIdentifier.DBInstances[0].Endpoint.Address,
             user: uname.SecretString,
             password: pword.SecretString,
             database: "company",
-            waitForConnections: true,
-            connectionLimit: 1,
-            queueLimit: 0,
-            enableKeepAlive: true
-          });
+            connectionTimeout: 5000
+          }), 10000);
 
           // simple query with timeout
-          const [rows, fields] = await connection.execute("SELECT * FROM `entries` LIMIT 100");
+          const [rows, fields] = await timeout(connection.execute("SELECT * FROM `entries` LIMIT 100"), 10000);
           res.set("Content-Type", "text/html");
           res.write("Here are the records: " + "\n");
           res.write(htmlTable(rows));
           res.end();
-          await connection.end();
+          connection.end().catch(e => console.error("Error closing connection:", e));
           return rows;
         } catch (err) {
-          console.error("Database error:", err);
-          res.status(500).write("Database error: " + err.message);
-          res.end();
+          console.error("Database error:", err.message || err);
+          if (!res.headersSent) {
+            res.status(500).write("Database error: " + (err.message || err));
+            res.end();
+          }
           if (connection) {
             try {
-              await connection.end();
+              connection.end();
             } catch (e) {
               console.error("Error closing connection:", e);
             }
